@@ -1,0 +1,547 @@
+{% extends "base.html" %}
+
+{% block title %}Investment Prediction - AI Stock Market Analyzer{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4">
+            <i class="fas fa-money-bill-trend-up me-3 text-success"></i>Investment Profitability Prediction
+        </h1>
+        <p class="lead">Predict the profitability of your investment with AI-powered analysis</p>
+    </div>
+</div>
+
+{% if results %}
+<!-- Results Section -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card border-{{ 'success' if results.is_profitable else 'danger' }}">
+            <div class="card-header bg-{{ 'success' if results.is_profitable else 'danger' }} text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-{{ 'check-circle' if results.is_profitable else 'exclamation-triangle' }} me-2"></i>
+                        Investment Prediction Results
+                    </h4>
+                    <button onclick="downloadInvestmentPDF()" class="btn btn-light">
+                        <i class="fas fa-download me-2"></i>Download PDF
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-4">
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="text-primary mb-1">{{ results.investment_amount|inr }}</h4>
+                            <p class="text-muted mb-0">Investment Amount</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="text-info mb-1">{{ results.predicted_return|inr }}</h4>
+                            <p class="text-muted mb-0">Predicted Return</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="mb-1">
+                                {% if results.predicted_profit > 0 %}
+                                    <span class="text-success">+{{ results.predicted_profit|inr }}</span>
+                                {% else %}
+                                    <span class="text-danger">{{ results.predicted_profit|inr }}</span>
+                                {% endif %}
+                            </h4>
+                            <p class="text-muted mb-0">Predicted Profit</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="mb-1">
+                            {% if results.profit_percentage > 0 %}
+                                <span class="text-success">+{{ "%.2f"|format(results.profit_percentage) }}%</span>
+                            {% else %}
+                                <span class="text-danger">{{ "%.2f"|format(results.profit_percentage) }}%</span>
+                            {% endif %}
+                        </h4>
+                        <p class="text-muted mb-0">Return Percentage</p>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Investment Status</h6>
+                        {% if results.is_profitable %}
+                            <span class="badge bg-success fs-6 mb-3">
+                                <i class="fas fa-thumbs-up me-1"></i>Profitable Investment
+                            </span>
+                            <p class="text-success">This investment shows positive potential based on our AI analysis.</p>
+                        {% else %}
+                            <span class="badge bg-danger fs-6 mb-3">
+                                <i class="fas fa-thumbs-down me-1"></i>Potential Loss
+                            </span>
+                            <p class="text-danger">Our analysis suggests this investment may result in a loss.</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Confidence Score</h6>
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div class="progress-bar bg-{{ 'success' if results.confidence_score > 0.7 else 'warning' if results.confidence_score > 0.5 else 'danger' }}" 
+                                 role="progressbar" style="width: {{ (results.confidence_score * 100)|round }}%">
+                                {{ (results.confidence_score * 100)|round }}%
+                            </div>
+                        </div>
+                        <p class="small text-muted">Higher confidence indicates more reliable prediction</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Company Info -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-building me-2"></i>Company Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6 class="card-title">{{ company.name }}</h6>
+                <p class="text-muted">{{ company.symbol }}</p>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Current Price</small>
+                    <h5 class="mb-2">{{ company.current_price|inr }}</h5>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Sector</small>
+                    <p class="mb-0">{{ company.sector }}</p>
+                </div>
+                
+                {% if company.pe_ratio %}
+                <div class="mb-3">
+                    <small class="text-muted">P/E Ratio</small>
+                    <p class="mb-0">{{ company.pe_ratio }}</p>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <small class="text-muted">Time Horizon</small>
+                    <p class="mb-0">
+                        {% if results.time_horizon == '1_week' %}1 Week
+                        {% elif results.time_horizon == '1_month' %}1 Month
+                        {% elif results.time_horizon == '1_year' %}1 Year
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Analysis -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-area me-2"></i>Detailed Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Shares Purchased</h6>
+                                <h4 class="text-primary">{{ "%.4f"|format(results.prediction_details.shares_purchased) }}</h4>
+                                <p class="card-text small">Based on current price</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Predicted Price</h6>
+                                <h4 class="text-info">{{ results.prediction_details.predicted_price|inr }}</h4>
+                                <p class="card-text small">Expected future price</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Price Change</h6>
+                                <h4 class="{{ 'text-success' if results.prediction_details.price_change > 0 else 'text-danger' }}">
+                                    {{ "%.2f"|format(results.prediction_details.price_change_percent) }}%
+                                </h4>
+                                <p class="card-text small">Expected price movement</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Risk Analysis -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>Risk Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Risk Level</label>
+                    <div>
+                        {% set risk_level = results.prediction_details.risk_analysis.risk_level %}
+                        <span class="badge bg-{{ 'success' if risk_level == 'Low' else 'warning' if risk_level == 'Medium' else 'danger' }} fs-6">
+                            {{ risk_level }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Volatility</label>
+                    <div class="progress">
+                        <div class="progress-bar bg-{{ 'success' if results.prediction_details.risk_analysis.volatility < 3 else 'warning' if results.prediction_details.risk_analysis.volatility < 6 else 'danger' }}" 
+                             role="progressbar" style="width: {{ results.prediction_details.risk_analysis.volatility * 10 }}%">
+                            {{ "%.2f"|format(results.prediction_details.risk_analysis.volatility) }}%
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Potential Loss</label>
+                    <p class="text-danger mb-0">
+                        Up to {{ results.prediction_details.risk_analysis.potential_loss_amount|inr }} 
+                        ({{ "%.2f"|format(results.prediction_details.risk_analysis.potential_loss_percent) }}%)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Market Factors -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Market Factors
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Valuation</label>
+                    <p class="mb-1">{{ results.prediction_details.market_factors.pe_analysis }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Company Size</label>
+                    <p class="mb-1">{{ results.prediction_details.market_factors.size_analysis }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Sector</label>
+                    <p class="mb-1">{{ results.prediction_details.market_factors.sector }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Market Sentiment</label>
+                    <p class="mb-0">{{ results.prediction_details.market_factors.market_sentiment }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Next Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Recommended Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <a href="{{ url_for('company_comparison') }}" class="btn btn-warning btn-lg">
+                            <i class="fas fa-balance-scale fa-2x d-block mb-2"></i>
+                            Compare with Others
+                        </a>
+                        <p class="small mt-2">Find better investment alternatives</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#newPredictionModal">
+                            <i class="fas fa-calculator fa-2x d-block mb-2"></i>
+                            Try Different Amount
+                        </button>
+                        <p class="small mt-2">Test with different investment amounts</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-info btn-lg">
+                            <i class="fas fa-history fa-2x d-block mb-2"></i>
+                            View History
+                        </a>
+                        <p class="small mt-2">Check your prediction history</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+
+<!-- Investment Form -->
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0">
+                    <i class="fas fa-calculator me-2"></i>Investment Prediction Form
+                </h3>
+                <p class="mb-0 mt-2">Select a company and enter your investment amount</p>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="investmentForm">
+                    <div class="mb-4">
+                        <label for="company_id" class="form-label">
+                            <i class="fas fa-building me-1"></i>Select Company
+                        </label>
+                        <select class="form-select" id="company_id" name="company_id" required>
+                            <option value="">Choose a company...</option>
+                            {% for company in companies %}
+                            <option value="{{ company.id }}" data-price="{{ company.current_price }}" data-sector="{{ company.sector }}">
+                                {{ company.name }} ({{ company.symbol }}) - {{ company.current_price|inr }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div> 
+
+<form method="POST" action="{{ url_for('investment_prediction') }}">
+  <div class="mb-3">
+    <label for="investment_amount" class="form-label">Investment Amount (₹)</label>
+    <input type="number" class="form-control" id="investment_amount" name="investment_amount" 
+           min="1000" max="1000000000" step="100" placeholder="Enter amount in rupees"
+           required value="{{ investment_amount if investment_amount else '' }}">
+  </div>
+
+  <div class="mb-3">
+    <label for="time_horizon" class="form-label">Time Horizon</label>
+    <select class="form-select" id="time_horizon" name="time_horizon">
+      <option value="1_week">1 Week</option>
+      <option value="1_month" selected>1 Month</option>
+      <option value="1_year">1 Year</option>
+    </select>
+  </div>
+
+                    <!-- Preview Card -->
+                    <div class="card bg-light mb-4" id="previewCard" style="display: none;">
+                        <div class="card-body">
+                            <h6 class="card-title">Investment Preview</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Company:</strong> <span id="previewCompany">-</span></p>
+                                    <p class="mb-1"><strong>Sector:</strong> <span id="previewSector">-</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Current Price:</strong> <span id="previewPrice">-</span></p>
+                                    <p class="mb-1"><strong>Shares:</strong> <span id="previewShares">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg" onclick="onPredictClick(event)">
+                            <i class="fas fa-chart-line me-2"></i>Predict Investment Profitability
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Information Cards -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>How It Works
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <ol class="small">
+                            <li>Select a company from our curated list</li>
+                            <li>Enter your investment amount</li>
+                            <li>Choose your investment time horizon</li>
+                            <li>Our AI analyzes historical data and market factors</li>
+                            <li>Get detailed profitability predictions with confidence scores</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>Investment Disclaimer
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted">
+                            These predictions are based on AI analysis of historical data and should not be considered as financial advice. 
+                            Always consult with a financial advisor and do your own research before making investment decisions. 
+                            Past performance does not guarantee future results.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- New Prediction Modal -->
+<div class="modal fade" id="newPredictionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Try Different Investment Amount</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body">
+                    {% if results %}
+                    <input type="hidden" name="company_id" value="{{ company.id }}">
+                    <input type="hidden" name="time_horizon" value="{{ results.time_horizon }}">
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="modal_investment_amount" class="form-label">New Investment Amount (₹)</label>
+                        <input type="number" class="form-control" id="modal_investment_amount" name="investment_amount" 
+                               min="1000" max="10000000" step="100" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Get New Prediction</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Analyzing Investment...</h5>
+                <p class="text-muted mb-0">Our AI is processing market data and historical trends</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Investment form handling
+document.getElementById('investmentForm').addEventListener('submit', function() {
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    loadingModal.show();
+});
+
+// Preview calculation
+function updatePreview() {
+    const companySelect = document.getElementById('company_id');
+    const amountInput = document.getElementById('investment_amount');
+    const previewCard = document.getElementById('previewCard');
+    
+    if (companySelect.value && amountInput.value) {
+        const selectedOption = companySelect.options[companySelect.selectedIndex];
+        const price = parseFloat(selectedOption.dataset.price);
+        const amount = parseFloat(amountInput.value);
+        const shares = amount / price;
+        
+        document.getElementById('previewCompany').textContent = selectedOption.text.split(' (')[0];
+        document.getElementById('previewSector').textContent = selectedOption.dataset.sector;
+        document.getElementById('previewPrice').textContent = '₹' + price.toLocaleString('en-IN', {minimumFractionDigits: 2});
+        document.getElementById('previewShares').textContent = shares.toFixed(4);
+        
+        previewCard.style.display = 'block';
+    } else {
+        previewCard.style.display = 'none';
+    }
+}
+
+document.getElementById('company_id').addEventListener('change', updatePreview);
+document.getElementById('investment_amount').addEventListener('input', updatePreview);
+
+// Format investment amount
+document.getElementById('investment_amount').addEventListener('input', function() {
+    let value = this.value.replace(/[^\d]/g, '');
+    if (value) {
+        this.value = value;
+    }
+});
+
+// PDF download function for investment prediction
+function downloadInvestmentPDF() {
+    {% if results %}
+    const predictionData = {
+        type: 'investment_prediction',
+        investment_amount: {{ results.investment_amount }},
+        predicted_return: {{ results.predicted_return }},
+        predicted_profit: {{ results.predicted_profit }},
+        profit_percentage: {{ results.profit_percentage }},
+        is_profitable: {{ results.is_profitable|tojson }},
+        confidence_score: {{ results.confidence_score }},
+        time_horizon: '{{ results.time_horizon }}',
+        prediction_details: {{ results.prediction_details|tojson }}
+    };
+    
+    fetch('{{ url_for("download_current_prediction_pdf") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(predictionData)
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.blob();
+        }
+        throw new Error('PDF generation failed');
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'investment_prediction_results.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    })
+    .catch(error => {
+        console.error('Error downloading PDF:', error);
+        alert('Error downloading PDF. Please try again.');
+    });
+    {% endif %}
+}
+</script>
+{% endblock %}

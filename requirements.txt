@@ -1,0 +1,14 @@
+Flask
+Flask-SQLAlchemy
+SQLAlchemy
+Werkzeug
+Flask-Login
+pandas
+python-dotenv
+Flask-Caching
+numpy
+scikit-learn
+numba
+reportlab
+apscheduler
+openai

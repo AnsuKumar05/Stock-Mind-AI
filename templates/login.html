@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Login - AI Stock Market Analyzer{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-lg">
+            <div class="card-header text-center bg-primary">
+                <h3 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    AI Stock Analyzer
+                </h3>
+                <p class="mb-0 mt-2">Login to your account</p>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope me-1"></i>Email Address
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email" required 
+                               placeholder="Enter your email">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock me-1"></i>Password
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" required 
+                               placeholder="Enter your password">
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-muted text-center">
+                <small>
+                    <i class="fas fa-info-circle me-1"></i>
+                    New users will be automatically registered
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12 text-center">
+        <h4 class="mb-4">Features</h4>
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-upload fa-2x text-primary mb-3"></i>
+                        <h5>CSV Upload</h5>
+                        <p class="card-text">Upload historical stock data for AI-powered predictions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-money-bill-trend-up fa-2x text-success mb-3"></i>
+                        <h5>Investment Prediction</h5>
+                        <p class="card-text">Predict profitability of your investments with confidence scores</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-balance-scale fa-2x text-warning mb-3"></i>
+                        <h5>Company Comparison</h5>
+                        <p class="card-text">Compare two companies to find the better investment option</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-brain fa-2x text-info mb-3"></i>
+                        <h5>AI Analysis</h5>
+                        <p class="card-text">Advanced machine learning models for accurate predictions</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

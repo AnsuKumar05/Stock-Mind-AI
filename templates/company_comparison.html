@@ -1,0 +1,747 @@
+{% extends "base.html" %}
+
+{% block title %}Company Comparison - AI Stock Market Analyzer{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4">
+            <i class="fas fa-balance-scale me-3 text-warning"></i>Company Comparison
+        </h1>
+        <p class="lead">Compare two companies to find the better investment opportunity</p>
+    </div>
+</div>
+
+{% if results %}
+<!-- Comparison Results -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-trophy me-2"></i>Comparison Results
+                    </h4>
+                    <button onclick="downloadComparisonPDF()" class="btn btn-light">
+                        <i class="fas fa-download me-2"></i>Download PDF
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-4">
+                    <div class="col-md-4">
+                        <div class="border-end">
+                            <h5 class="text-primary mb-1">{{ company1.name }}</h5>
+                            <h3 class="{{ 'text-success' if results.company1_predicted_return > 0 else 'text-danger' }}">
+                                {{ "%.2f"|format(results.company1_predicted_return) }}%
+                            </h3>
+                            <p class="text-muted mb-0">Predicted Return</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border-end">
+                        {% if results.recommended_company == 1 %}
+                            <div class="badge bg-success fs-5 mb-2">
+                                <i class="fas fa-crown me-1"></i>WINNER
+                            </div>
+                            <h4 class="text-success mb-1">{{ company1.name }}</h4>
+                            <p class="text-muted mb-0">Better Choice</p>
+                        {% else %}
+                            <div class="badge bg-success fs-5 mb-2">
+                                <i class="fas fa-crown me-1"></i>WINNER
+                            </div>
+                            <h4 class="text-success mb-1">{{ company2.name }}</h4>
+                            <p class="text-muted mb-0">Better Choice</p>
+                        {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h5 class="text-info mb-1">{{ company2.name }}</h5>
+                        <h3 class="{{ 'text-success' if results.company2_predicted_return > 0 else 'text-danger' }}">
+                            {{ "%.2f"|format(results.company2_predicted_return) }}%
+                        </h3>
+                        <p class="text-muted mb-0">Predicted Return</p>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <h6>Return Difference</h6>
+                            <h4 class="text-warning">{{ "%.2f"|format(results.comparison_details.return_difference) }}%</h4>
+                            <p class="text-muted">The recommended company is expected to perform {{ "%.2f"|format(results.comparison_details.return_difference) }}% better</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6>Recommendation Strength</h6>
+                            <span class="badge bg-{{ 'success' if results.comparison_details.recommendation_strength == 'Strong' else 'warning' if results.comparison_details.recommendation_strength == 'Moderate' else 'secondary' }} fs-6">
+                                {{ results.comparison_details.recommendation_strength }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Overall Confidence</h6>
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div class="progress-bar bg-{{ 'success' if results.confidence_score > 0.7 else 'warning' if results.confidence_score > 0.5 else 'danger' }}" 
+                                 role="progressbar" style="width: {{ (results.confidence_score * 100)|round }}%">
+                                {{ (results.confidence_score * 100)|round }}%
+                            </div>
+                        </div>
+                        <p class="small text-muted">Based on both company analyses</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Comparison -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100 {{ 'border-success' if results.recommended_company == 1 else '' }}">
+            <div class="card-header {{ 'bg-success text-white' if results.recommended_company == 1 else 'bg-light' }}">
+                <h5 class="mb-0">
+                    <i class="fas fa-building me-2"></i>{{ company1.name }}
+                    {% if results.recommended_company == 1 %}
+                        <span class="badge bg-warning text-dark ms-2">Recommended</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <small class="text-muted">Symbol</small>
+                        <p class="mb-0 fw-bold">{{ company1.symbol }}</p>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Sector</small>
+                        <p class="mb-0">{{ company1.sector }}</p>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <small class="text-muted">Current Price</small>
+                        <p class="mb-0 fw-bold">{{ company1.current_price|inr }}</p>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">P/E Ratio</small>
+                        <p class="mb-0">{{ company1.pe_ratio if company1.pe_ratio else 'N/A' }}</p>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Predicted Return</small>
+                    <h4 class="{{ 'text-success' if results.comparison_details.company1.predicted_return_percent > 0 else 'text-danger' }}">
+                        {{ "%.2f"|format(results.comparison_details.company1.predicted_return_percent) }}%
+                    </h4>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Individual Confidence</small>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-{{ 'success' if results.comparison_details.company1.confidence_score > 0.7 else 'warning' if results.comparison_details.company1.confidence_score > 0.5 else 'danger' }}" 
+                             role="progressbar" style="width: {{ (results.comparison_details.company1.confidence_score * 100)|round }}%">
+                            {{ (results.comparison_details.company1.confidence_score * 100)|round }}%
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Risk Level</small>
+                    <span class="badge bg-{{ 'success' if results.comparison_details.company1.risk_level == 'Low' else 'warning' if results.comparison_details.company1.risk_level == 'Medium' else 'danger' }}">
+                        {{ results.comparison_details.company1.risk_level }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card h-100 {{ 'border-success' if results.recommended_company == 2 else '' }}">
+            <div class="card-header {{ 'bg-success text-white' if results.recommended_company == 2 else 'bg-light' }}">
+                <h5 class="mb-0">
+                    <i class="fas fa-building me-2"></i>{{ company2.name }}
+                    {% if results.recommended_company == 2 %}
+                        <span class="badge bg-warning text-dark ms-2">Recommended</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <small class="text-muted">Symbol</small>
+                        <p class="mb-0 fw-bold">{{ company2.symbol }}</p>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Sector</small>
+                        <p class="mb-0">{{ company2.sector }}</p>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <small class="text-muted">Current Price</small>
+                        <p class="mb-0 fw-bold">{{ company2.current_price|inr }}</p>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">P/E Ratio</small>
+                        <p class="mb-0">{{ company2.pe_ratio if company2.pe_ratio else 'N/A' }}</p>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Predicted Return</small>
+                    <h4 class="{{ 'text-success' if results.comparison_details.company2.predicted_return_percent > 0 else 'text-danger' }}">
+                        {{ "%.2f"|format(results.comparison_details.company2.predicted_return_percent) }}%
+                    </h4>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Individual Confidence</small>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-{{ 'success' if results.comparison_details.company2.confidence_score > 0.7 else 'warning' if results.comparison_details.company2.confidence_score > 0.5 else 'danger' }}" 
+                             role="progressbar" style="width: {{ (results.comparison_details.company2.confidence_score * 100)|round }}%">
+                            {{ (results.comparison_details.company2.confidence_score * 100)|round }}%
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Risk Level</small>
+                    <span class="badge bg-{{ 'success' if results.comparison_details.company2.risk_level == 'Low' else 'warning' if results.comparison_details.company2.risk_level == 'Medium' else 'danger' }}">
+                        {{ results.comparison_details.company2.risk_level }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Market Analysis -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Market Analysis Comparison
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Valuation Comparison</h6>
+                                <p class="card-text small">{{ results.comparison_details.market_analysis.pe_comparison }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Company Size</h6>
+                                <p class="card-text small">{{ results.comparison_details.market_analysis.size_comparison }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Sector Comparison</h6>
+                                <p class="card-text small">{{ results.comparison_details.market_analysis.sector_comparison }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Investment Recommendation -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Investment Recommendation
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-{{ 'success' if results.comparison_details.recommendation_strength in ['Strong', 'Moderate'] else 'warning' }}">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-{{ 'check-circle' if results.comparison_details.recommendation_strength == 'Strong' else 'exclamation-circle' if results.comparison_details.recommendation_strength == 'Moderate' else 'info-circle' }} me-2"></i>
+                        {{ results.comparison_details.recommendation_strength }} Recommendation
+                    </h6>
+                    <p class="mb-2">
+                        Based on our AI analysis, 
+                        <strong>
+                        {% if results.recommended_company == 1 %}
+                            {{ company1.name }}
+                        {% else %}
+                            {{ company2.name }}
+                        {% endif %}
+                        </strong>
+                        appears to be the better investment choice with a {{ "%.2f"|format(results.comparison_details.return_difference) }}% advantage.
+                    </p>
+                    <hr>
+                    <p class="mb-0">
+                        <strong>Confidence Level:</strong> {{ (results.confidence_score * 100)|round }}% - 
+                        {% if results.confidence_score > 0.7 %}
+                            High reliability in this comparison
+                        {% elif results.confidence_score > 0.5 %}
+                            Moderate reliability - consider additional research
+                        {% else %}
+                            Lower reliability - exercise caution and seek additional analysis
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Next Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-route me-2"></i>Next Steps
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <a href="{{ url_for('investment_prediction') }}" class="btn btn-success btn-lg">
+                            <i class="fas fa-money-bill-trend-up fa-2x d-block mb-2"></i>
+                            Calculate Investment
+                        </a>
+                        <p class="small mt-2">Get specific amount predictions for the winner</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <button type="button" class="btn btn-warning btn-lg" data-bs-toggle="modal" data-bs-target="#newComparisonModal">
+                            <i class="fas fa-sync-alt fa-2x d-block mb-2"></i>
+                            New Comparison
+                        </button>
+                        <p class="small mt-2">Compare different companies</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-info btn-lg">
+                            <i class="fas fa-history fa-2x d-block mb-2"></i>
+                            View History
+                        </a>
+                        <p class="small mt-2">Check your comparison history</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+
+<!-- Comparison Form -->
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h3 class="mb-0">
+                    <i class="fas fa-balance-scale me-2"></i>Company Comparison Form
+                </h3>
+                <p class="mb-0 mt-2">Select two companies to compare their investment potential</p>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="comparisonForm">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <div class="card bg-light">
+                                <div class="card-header">
+                                    <h5 class="mb-0 text-primary">Company A</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="company1_id" class="form-label">
+                                            <i class="fas fa-building me-1"></i>Select First Company
+                                        </label>
+                                        <select class="form-select" id="company1_id" name="company1_id" required>
+                                            <option value="">Choose first company...</option>
+                                            {% for company in companies %}
+                                            <option value="{{ company.id }}" data-name="{{ company.name }}" data-symbol="{{ company.symbol }}" 
+                                                    data-price="{{ company.current_price }}" data-sector="{{ company.sector }}">
+                                                {{ company.name }} ({{ company.symbol }})
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Company 1 Preview -->
+                                    <div class="card border-primary" id="company1Preview" style="display: none;">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-title mb-1" id="company1Name">-</h6>
+                                            <p class="card-text small mb-1">
+                                                <strong>Symbol:</strong> <span id="company1Symbol">-</span><br>
+                                                <strong>Price:</strong> <span id="company1Price">-</span><br>
+                                                <strong>Sector:</strong> <span id="company1Sector">-</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-center justify-content-center">
+                            <div class="text-center">
+                                <i class="fas fa-exchange-alt fa-3x text-warning"></i>
+                                <p class="small text-muted mt-2">VS</p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <div class="card bg-light">
+                                <div class="card-header">
+                                    <h5 class="mb-0 text-info">Company B</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="company2_id" class="form-label">
+                                            <i class="fas fa-building me-1"></i>Select Second Company
+                                        </label>
+                                        <select class="form-select" id="company2_id" name="company2_id" required>
+                                            <option value="">Choose second company...</option>
+                                            {% for company in companies %}
+                                            <option value="{{ company.id }}" data-name="{{ company.name }}" data-symbol="{{ company.symbol }}" 
+                                                    data-price="{{ company.current_price }}" data-sector="{{ company.sector }}">
+                                                {{ company.name }} ({{ company.symbol }})
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Company 2 Preview -->
+                                    <div class="card border-info" id="company2Preview" style="display: none;">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-title mb-1" id="company2Name">-</h6>
+                                            <p class="card-text small mb-1">
+                                                <strong>Symbol:</strong> <span id="company2Symbol">-</span><br>
+                                                <strong>Price:</strong> <span id="company2Price">-</span><br>
+                                                <strong>Sector:</strong> <span id="company2Sector">-</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6 mx-auto">
+                            <div class="mb-4">
+                                <label for="time_horizon" class="form-label">
+                                    <i class="fas fa-clock me-1"></i>Time Horizon for Comparison
+                                </label>
+                                <select class="form-select" id="time_horizon" name="time_horizon" required>
+                                    <option value="1_week">1 Week</option>
+                                    <option value="1_month" selected>1 Month</option>
+                                    <option value="1_year">1 Year</option>
+                                </select>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Select the time period for comparison analysis
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-warning btn-lg">
+                                    <i class="fas fa-balance-scale me-2"></i>Compare Companies
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Information Cards -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>What We Compare
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="small">
+                            <li>Predicted return percentages</li>
+                            <li>Risk levels and volatility</li>
+                            <li>Market valuation (P/E ratios)</li>
+                            <li>Company size and sector analysis</li>
+                            <li>Historical performance patterns</li>
+                            <li>Confidence scores for each prediction</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-brain me-2"></i>AI Analysis Process
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <ol class="small">
+                            <li>Analyze historical data for both companies</li>
+                            <li>Apply machine learning models to predict future performance</li>
+                            <li>Calculate risk-adjusted returns</li>
+                            <li>Compare market factors and fundamentals</li>
+                            <li>Generate recommendation with confidence score</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Available Companies -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-list me-2"></i>Available Companies ({{ companies|length }})
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for company in companies %}
+                            <div class="col-md-4 col-sm-6 mb-2">
+                                <div class="card card-sm">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title mb-1">{{ company.name }}</h6>
+                                        <p class="card-text small mb-0">
+                                            <span class="badge bg-secondary">{{ company.symbol }}</span>
+                                            <span class="text-muted ms-2">{{ company.sector }}</span>
+                                            <br>{{ company.current_price|inr }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- New Comparison Modal -->
+<div class="modal fade" id="newComparisonModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Start New Comparison</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('company_comparison') }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="modal_company1_id" class="form-label">First Company</label>
+                            <select class="form-select" id="modal_company1_id" name="company1_id" required>
+                                <option value="">Choose first company...</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}">{{ company.name }} ({{ company.symbol }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="modal_company2_id" class="form-label">Second Company</label>
+                            <select class="form-select" id="modal_company2_id" name="company2_id" required>
+                                <option value="">Choose second company...</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}">{{ company.name }} ({{ company.symbol }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <label for="modal_time_horizon" class="form-label">Time Horizon</label>
+                            <select class="form-select" id="modal_time_horizon" name="time_horizon" required>
+                                <option value="1_week">1 Week</option>
+                                <option value="1_month" selected>1 Month</option>
+                                <option value="1_year">1 Year</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Compare</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-warning mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Comparing Companies...</h5>
+                <p class="text-muted mb-0">Analyzing market data and performance metrics</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Form handling
+document.getElementById('comparisonForm').addEventListener('submit', function() {
+    const company1 = document.getElementById('company1_id').value;
+    const company2 = document.getElementById('company2_id').value;
+    
+    if (company1 === company2) {
+        alert('Please select two different companies for comparison.');
+        return false;
+    }
+    
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    loadingModal.show();
+});
+
+// Company preview functions
+function updateCompanyPreview(selectElement, previewId, nameId, symbolId, priceId, sectorId) {
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    const previewCard = document.getElementById(previewId);
+    
+    if (selectedOption.value) {
+        document.getElementById(nameId).textContent = selectedOption.dataset.name;
+        document.getElementById(symbolId).textContent = selectedOption.dataset.symbol;
+        document.getElementById(priceId).textContent = '₹' + parseFloat(selectedOption.dataset.price).toLocaleString('en-IN', {minimumFractionDigits: 2});
+        document.getElementById(sectorId).textContent = selectedOption.dataset.sector;
+        previewCard.style.display = 'block';
+    } else {
+        previewCard.style.display = 'none';
+    }
+}
+
+// Company selection event listeners
+document.getElementById('company1_id').addEventListener('change', function() {
+    updateCompanyPreview(this, 'company1Preview', 'company1Name', 'company1Symbol', 'company1Price', 'company1Sector');
+    
+    // Update company2 options to exclude selected company1
+    const company1Value = this.value;
+    const company2Select = document.getElementById('company2_id');
+    const company2Options = company2Select.querySelectorAll('option');
+    
+    company2Options.forEach(option => {
+        if (option.value === company1Value) {
+            option.disabled = true;
+            option.style.display = 'none';
+        } else {
+            option.disabled = false;
+            option.style.display = 'block';
+        }
+    });
+    
+    // Clear company2 if same as company1
+    if (company2Select.value === company1Value) {
+        company2Select.value = '';
+        document.getElementById('company2Preview').style.display = 'none';
+    }
+});
+
+document.getElementById('company2_id').addEventListener('change', function() {
+    updateCompanyPreview(this, 'company2Preview', 'company2Name', 'company2Symbol', 'company2Price', 'company2Sector');
+    
+    // Update company1 options to exclude selected company2
+    const company2Value = this.value;
+    const company1Select = document.getElementById('company1_id');
+    const company1Options = company1Select.querySelectorAll('option');
+    
+    company1Options.forEach(option => {
+        if (option.value === company2Value) {
+            option.disabled = true;
+            option.style.display = 'none';
+        } else {
+            option.disabled = false;
+            option.style.display = 'block';
+        }
+    });
+    
+    // Clear company1 if same as company2
+    if (company1Select.value === company2Value) {
+        company1Select.value = '';
+        document.getElementById('company1Preview').style.display = 'none';
+    }
+});
+
+// Modal form validation
+document.querySelector('#newComparisonModal form').addEventListener('submit', function(e) {
+    const company1 = document.getElementById('modal_company1_id').value;
+    const company2 = document.getElementById('modal_company2_id').value;
+    
+    if (company1 === company2) {
+        e.preventDefault();
+        alert('Please select two different companies for comparison.');
+        return false;
+    }
+});
+
+// PDF download function for company comparison
+function downloadComparisonPDF() {
+    {% if results %}
+    const comparisonData = {
+        type: 'company_comparison',
+        company1_predicted_return: {{ results.company1_predicted_return }},
+        company2_predicted_return: {{ results.company2_predicted_return }},
+        recommended_company: {{ results.recommended_company }},
+        confidence_score: {{ results.confidence_score }},
+        time_horizon: '{{ results.time_horizon }}',
+        comparison_details: {{ results.comparison_details|tojson }}
+    };
+    
+    fetch('{{ url_for("download_current_prediction_pdf") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(comparisonData)
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.blob();
+        }
+        throw new Error('PDF generation failed');
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'company_comparison_results.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    })
+    .catch(error => {
+        console.error('Error downloading PDF:', error);
+        alert('Error downloading PDF. Please try again.');
+    });
+    {% endif %}
+}
+</script>
+{% endblock %}

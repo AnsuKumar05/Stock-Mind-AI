@@ -136,7 +136,7 @@
                         </button>
                     </li>
                 </ul>
-                
+
                 <div class="tab-content" id="activityTabContent">
                     <!-- CSV Predictions Tab -->
                     <div class="tab-pane fade show active" id="csv" role="tabpanel">
@@ -151,6 +151,7 @@
                                         <th>Change</th>
                                         <th>Confidence</th>
                                         <th>Model</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -188,6 +189,13 @@
                                             </div>
                                         </td>
                                         <td>{{ pred.model_type }}</td>
+                                        <td>
+                                            <form action="{{ url_for('delete_prediction', id=pred.id) }}" method="POST" style="display:inline;">
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -204,7 +212,7 @@
                         </div>
                         {% endif %}
                     </div>
-                    
+
                     <!-- Investment Predictions Tab -->
                     <div class="tab-pane fade" id="investment" role="tabpanel">
                         {% if investment_predictions %}
@@ -219,6 +227,7 @@
                                         <th>Profit</th>
                                         <th>Status</th>
                                         <th>Confidence</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -261,6 +270,13 @@
                                                 </div>
                                             </div>
                                         </td>
+                                        <td>
+                                            <form action="{{ url_for('delete_investment', id=invest.id) }}" method="POST" style="display:inline;">
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -277,7 +293,7 @@
                         </div>
                         {% endif %}
                     </div>
-                    
+
                     <!-- Company Comparisons Tab -->
                     <div class="tab-pane fade" id="comparison" role="tabpanel">
                         {% if company_comparisons %}
@@ -292,6 +308,7 @@
                                         <th>Return 2</th>
                                         <th>Recommended</th>
                                         <th>Confidence</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -330,6 +347,13 @@
                                                     {{ (comp.confidence_score * 100)|round }}%
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td>
+                                            <form action="{{ url_for('delete_comparison', id=comp.id) }}" method="POST" style="display:inline;">
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -387,20 +411,6 @@
         </div>
     </div>
 </div>
-<div class="card mt-4">
-  <div class="card-header bg-primary text-white">
-    <h5 class="mb-0"><i class="fas fa-robot me-2"></i> StockMind Copilot</h5>
-  </div>
-
-  <div id="chat-container" class="card-body" style="max-height:400px; overflow-y:auto; font-family:monospace;"></div>
-
-  <div class="card-footer">
-    <div class="input-group">
-      <input id="user-input" class="form-control" placeholder="Type your message..." />
-      <button id="send-btn" type="button" class="btn btn-primary">Send</button>
-    </div>
-  </div>
-</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -456,6 +466,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // keep compatibility if you still have onclick="sendMessage()"
   window.sendMessage = sendMessage;
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const urlParams = new URLSearchParams(window.location.search);
+  const activeTab = urlParams.get('tab') || 'csv';
+  const triggerEl = document.querySelector(`#${activeTab}-tab`);
+  if (triggerEl) {
+    const tab = new bootstrap.Tab(triggerEl);
+    tab.show();
+  }
 });
 </script>
 {% endblock %}

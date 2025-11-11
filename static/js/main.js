@@ -104,13 +104,14 @@ function setupFormValidations() {
  * Validate investment amount
  */
 function validateInvestmentAmount(input) {
-    const value = parseFloat(input.value);
-    const min = 1000;
-    const max = 10000000;
-    
+    // Remove commas before parsing
+    const value = parseFloat(input.value.replace(/,/g, ''));
+    const min = 500;
+    const max = 1000000000;
+
     let isValid = true;
     let message = '';
-    
+
     if (isNaN(value) || value < min) {
         isValid = false;
         message = `Minimum investment amount is ₹${min.toLocaleString('en-IN')}`;
@@ -118,7 +119,7 @@ function validateInvestmentAmount(input) {
         isValid = false;
         message = `Maximum investment amount is ₹${max.toLocaleString('en-IN')}`;
     }
-    
+
     // Update validation state
     if (isValid) {
         input.classList.remove('is-invalid');
@@ -127,7 +128,7 @@ function validateInvestmentAmount(input) {
         input.classList.remove('is-valid');
         input.classList.add('is-invalid');
     }
-    
+
     // Update feedback message
     let feedback = input.parentNode.querySelector('.invalid-feedback');
     if (!feedback) {
@@ -136,7 +137,7 @@ function validateInvestmentAmount(input) {
         input.parentNode.appendChild(feedback);
     }
     feedback.textContent = message;
-    
+
     return isValid;
 }
 
@@ -297,23 +298,43 @@ function setupDragAndDrop(container, input) {
 /**
  * Setup number formatting
  */
-function setupNumberFormatting() {
-    // Format currency inputs
-    const currencyInputs = document.querySelectorAll('input[name="investment_amount"]');
-    currencyInputs.forEach(function(input) {
-        input.addEventListener('blur', function() {
-            formatCurrencyInput(this);
-        });
-        
-        input.addEventListener('focus', function() {
-            unformatCurrencyInput(this);
-        });
-    });
-    
-    // Format display numbers
-    formatDisplayNumbers();
-}
+function validateInvestmentAmount(input) {
+    // Remove commas before parsing
+    const value = parseFloat(input.value.replace(/,/g, ''));
+    const min = 500;
+    const max = 1000000000;
 
+    let isValid = true;
+    let message = '';
+
+    if (isNaN(value) || value < min) {
+        isValid = false;
+        message = `Minimum investment amount is ₹${min.toLocaleString('en-IN')}`;
+    } else if (value > max) {
+        isValid = false;
+        message = `Maximum investment amount is ₹${max.toLocaleString('en-IN')}`;
+    }
+
+    // Update validation state
+    if (isValid) {
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+    } else {
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
+    }
+
+    // Update feedback message
+    let feedback = input.parentNode.querySelector('.invalid-feedback');
+    if (!feedback) {
+        feedback = document.createElement('div');
+        feedback.className = 'invalid-feedback';
+        input.parentNode.appendChild(feedback);
+    }
+    feedback.textContent = message;
+
+    return isValid;
+}
 /**
  * Format currency input
  */
@@ -702,4 +723,18 @@ window.AIStockAnalyzer = {
     validateCompanySelection
 };
 
+document.addEventListener('DOMContentLoaded', function() {
+    initializeApp();
+
+    // Attach the predict button handler AFTER the form exists
+    const form = document.getElementById("investmentForm");
+    if (form) {
+        form.addEventListener("submit", onPredictClick);
+        console.log(" Predict form listener attached");
+    } else {
+        console.error("InvestmentForm not found");
+    }
+});
+
 console.log('AI Stock Analyzer JavaScript loaded successfully');
+

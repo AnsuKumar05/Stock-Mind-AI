@@ -5,8 +5,9 @@ from datetime import datetime, timedelta
 from models import Company
 from extensions import db
 
-# Define all 15 companies
+
 COMPANIES = [
+    # Existing 15 Indian companies
     {
         'name': 'Reliance Industries Ltd',
         'symbol': 'RELIANCE',
@@ -126,6 +127,128 @@ COMPANIES = [
         'current_price': 1234.60,
         'market_cap': 296000000000,
         'pe_ratio': 39.2
+    },
+
+    # 15 additional top global companies
+    {
+        'name': 'Apple Inc',
+        'symbol': 'AAPL',
+        'sector': 'Technology',
+        'current_price': 174.50,
+        'market_cap': 2800000000000,
+        'pe_ratio': 28.5
+    },
+    {
+        'name': 'Microsoft Corporation',
+        'symbol': 'MSFT',
+        'sector': 'Technology',
+        'current_price': 310.75,
+        'market_cap': 2350000000000,
+        'pe_ratio': 34.2
+    },
+    {
+        'name': 'Amazon.com Inc',
+        'symbol': 'AMZN',
+        'sector': 'E-commerce',
+        'current_price': 145.30,
+        'market_cap': 1500000000000,
+        'pe_ratio': 55.1
+    },
+    {
+        'name': 'Alphabet Inc',
+        'symbol': 'GOOGL',
+        'sector': 'Technology',
+        'current_price': 138.50,
+        'market_cap': 1900000000000,
+        'pe_ratio': 26.7
+    },
+    {
+        'name': 'Tesla Inc',
+        'symbol': 'TSLA',
+        'sector': 'Automobile',
+        'current_price': 720.40,
+        'market_cap': 730000000000,
+        'pe_ratio': 85.4
+    },
+    {
+        'name': 'Meta Platforms Inc',
+        'symbol': 'META',
+        'sector': 'Technology',
+        'current_price': 315.20,
+        'market_cap': 900000000000,
+        'pe_ratio': 28.9
+    },
+    {
+        'name': 'Berkshire Hathaway Inc',
+        'symbol': 'BRK-A',
+        'sector': 'Financial Services',
+        'current_price': 480000.00,
+        'market_cap': 750000000000,
+        'pe_ratio': 21.0
+    },
+    {
+        'name': 'Visa Inc',
+        'symbol': 'V',
+        'sector': 'Financial Services',
+        'current_price': 245.50,
+        'market_cap': 550000000000,
+        'pe_ratio': 32.3
+    },
+    {
+        'name': 'JPMorgan Chase & Co',
+        'symbol': 'JPM',
+        'sector': 'Banking',
+        'current_price': 162.30,
+        'market_cap': 510000000000,
+        'pe_ratio': 13.5
+    },
+    {
+        'name': 'Johnson & Johnson',
+        'symbol': 'JNJ',
+        'sector': 'Pharmaceuticals',
+        'current_price': 178.40,
+        'market_cap': 470000000000,
+        'pe_ratio': 23.4
+    },
+    {
+        'name': 'Samsung Electronics',
+        'symbol': '005930.KQ',
+        'sector': 'Technology',
+        'current_price': 62.50,
+        'market_cap': 410000000000,
+        'pe_ratio': 14.2
+    },
+    {
+        'name': 'Nestle S.A.',
+        'symbol': 'NESN.SW',
+        'sector': 'Food & Beverage',
+        'current_price': 118.50,
+        'market_cap': 360000000000,
+        'pe_ratio': 25.7
+    },
+    {
+        'name': 'Toyota Motor Corporation',
+        'symbol': 'TM',
+        'sector': 'Automobile',
+        'current_price': 145.75,
+        'market_cap': 260000000000,
+        'pe_ratio': 12.9
+    },
+    {
+        'name': 'Roche Holding AG',
+        'symbol': 'ROG.SW',
+        'sector': 'Pharmaceuticals',
+        'current_price': 320.60,
+        'market_cap': 350000000000,
+        'pe_ratio': 28.3
+    },
+    {
+        'name': 'Novartis AG',
+        'symbol': 'NOVN.SW',
+        'sector': 'Pharmaceuticals',
+        'current_price': 88.50,
+        'market_cap': 200000000000,
+        'pe_ratio': 24.1
     }
 ]
 

@@ -1,4 +1,3 @@
-# Stock-Mind-AI
 
 ## Overview
 

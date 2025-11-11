@@ -18,16 +18,12 @@ from utils import convert_numpy_types, serialize_prediction_data, generate_predi
 import time
 import json
 from seed_companies import initialize_companies
+from flask_migrate import Migrate
 from dotenv import load_dotenv
 load_dotenv()
-from apscheduler.schedulers.background import BackgroundScheduler
 from seed_companies import update_company_data  # make sure your update function is imported
-import atexit
-'''
-import cohere
-COHERE_API_KEY = "3tutYe8F70AhegSDZVURXK1mKkiQQFAIROGh0JoZ"   # Replace with your real key
-co = cohere.Client(COHERE_API_KEY)
-'''
+
+
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
@@ -58,19 +54,13 @@ else:
     }
 
 db.init_app(app)
+migrate = Migrate(app, db)
 with app.app_context():
     try:
         db.create_all()
         logging.info("Database tables created successfully")
         initialize_companies()
         logging.info("Predefined companies initialized")
-        scheduler = BackgroundScheduler()
-        # Schedule to run daily at midnight
-        scheduler.add_job(func=lambda: update_company_data(), trigger="cron", hour=0, minute=0)
-        scheduler.start()
-        atexit.register(lambda: scheduler.shutdown())
-        logging.info("APScheduler started for daily company updates")
-        # ----------------------------------------------------------------
     except Exception as e:
         logging.error(f"Error creating database tables: {e}")
 
@@ -123,28 +113,7 @@ def preprocess(data):
 def background_prediction(job_id, processed_input):
     result = run_model(processed_input)
     cache.set(job_id, result, timeout=300)  # store result for 5 min
-'''  
-@app.route("/chatbot", methods=["POST"])
-def chatbot():
-    user_message = request.json.get("message", "")
-    if not user_message:
-        return jsonify({"response": "Please type something."})
 
-    try:
-        # Use Cohere Chat API
-        response = co.chat(
-            model="command-r-plus",  # latest Cohere chat model
-            message=f"You are a helpful stock market assistant. User asked: {user_message}",
-            temperature=0.7
-        )
-
-        bot_reply = response.text.strip()
-        return jsonify({"response": bot_reply})
-
-    except Exception as e:
-        print("Error:", e)
-        return jsonify({"response": f"Error: {str(e)}"})
-'''
 @app.route('/get_result', methods=['POST'])
 def get_result():
     input_data = request.json
@@ -229,6 +198,8 @@ def login():
 
     return render_template('login.html')
 
+
+
 @app.route('/logout')
 def logout():
     """User logout"""
@@ -239,23 +210,28 @@ def logout():
 @app.route("/")
 def home():
     return render_template("dashboard.html")  # Your dashboard file
-
+    
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """User dashboard showing prediction history"""
+    """User dashboard showing full prediction history"""
     try:
         user_id = session['user_id']
-        
-        # Get recent predictions for this user
-        recent_predictions = Prediction.query.filter_by(user_id=user_id).order_by(Prediction.created_at.desc()).limit(5).all()
-        
-        # Get recent investment predictions
-        recent_investments = InvestmentPrediction.query.filter_by(user_id=user_id).order_by(InvestmentPrediction.created_at.desc()).limit(5).all()
-        
-        # Get recent company comparisons
-        recent_comparisons = CompanyComparison.query.filter_by(user_id=user_id).order_by(CompanyComparison.created_at.desc()).limit(5).all()
-        
+        from_delete = request.args.get('from_delete')  # detect redirect source
+
+        # 🔒 Skip any CSV analysis or background predictor triggers after deletion
+        if from_delete:
+            app.logger.info(f"Dashboard reloaded after {from_delete} deletion — skipping CSV analysis.")
+
+        # Get all predictions for this user (newest first)
+        recent_predictions = Prediction.query.filter_by(user_id=user_id).order_by(Prediction.created_at.desc()).all()
+
+        # Get all investment predictions
+        recent_investments = InvestmentPrediction.query.filter_by(user_id=user_id).order_by(InvestmentPrediction.created_at.desc()).all()
+
+        # Get all company comparisons
+        recent_comparisons = CompanyComparison.query.filter_by(user_id=user_id).order_by(CompanyComparison.created_at.desc()).all()
+
         # Process prediction data for template
         processed_predictions = []
         for prediction in recent_predictions:
@@ -270,7 +246,7 @@ def dashboard():
                 'predicted_change': None,
                 'predicted_change_percent': None
             }
-            
+
             # Parse prediction data safely
             if prediction.prediction_data:
                 try:
@@ -279,7 +255,7 @@ def dashboard():
                     prediction_info['latest_price'] = details.get('latest_price', prediction.predicted_price * 0.95)
                     prediction_info['predicted_change'] = details.get('predicted_change', prediction.predicted_price - prediction_info['latest_price'])
                     prediction_info['predicted_change_percent'] = details.get('predicted_change_percent', 0)
-                except:
+                except Exception:
                     # Fallback values if parsing fails
                     prediction_info['latest_price'] = prediction.predicted_price * 0.95
                     prediction_info['predicted_change'] = prediction.predicted_price - prediction_info['latest_price']
@@ -289,24 +265,55 @@ def dashboard():
                 prediction_info['latest_price'] = prediction.predicted_price * 0.95
                 prediction_info['predicted_change'] = prediction.predicted_price - prediction_info['latest_price']
                 prediction_info['predicted_change_percent'] = (prediction_info['predicted_change'] / prediction_info['latest_price'] * 100)
-            
+
             processed_predictions.append(prediction_info)
-        
-        # Get upload history
-        uploads = Upload.query.filter_by(user_id=user_id).order_by(Upload.created_at.desc()).limit(5).all()
-        
+
+        # Get full upload history (newest first)
+        uploads = Upload.query.filter_by(user_id=user_id).order_by(Upload.created_at.desc()).all()
+
         app.logger.info(f"Dashboard loaded for user {user_id} with {len(processed_predictions)} predictions")
-        
-        return render_template('dashboard.html', 
-                             predictions=processed_predictions, 
-                             uploads=uploads,
-                             investment_predictions=recent_investments,
-                             company_comparisons=recent_comparisons)
-        
+
+        return render_template(
+            'dashboard.html',
+            predictions=processed_predictions,
+            uploads=uploads,
+            investment_predictions=recent_investments,
+            company_comparisons=recent_comparisons
+        )
+
     except Exception as e:
         app.logger.error(f"Dashboard error for user {session.get('user_id')}: {e}")
         flash('Error loading dashboard. Please try again.', 'danger')
         return redirect(url_for('login'))
+
+# --- DELETE ROUTES FOR DASHBOARD ITEMS ---
+@app.route('/delete_prediction/<int:id>', methods=['POST'])
+def delete_prediction(id):
+    from models import Prediction
+    pred = Prediction.query.get_or_404(id)
+    db.session.delete(pred)
+    db.session.commit()
+    flash('Prediction deleted successfully!', 'success')
+    return redirect(url_for('dashboard', tab='prediction'))
+
+@app.route('/delete_investment/<int:id>', methods=['POST'])
+def delete_investment(id):
+    from models import InvestmentPrediction
+    invest = InvestmentPrediction.query.get_or_404(id)
+    db.session.delete(invest)
+    db.session.commit()
+    flash('Investment deleted successfully!', 'success')
+    return redirect(url_for('dashboard', tab='investment'))
+
+@app.route('/delete_comparison/<int:id>', methods=['POST'])
+def delete_comparison(id):
+    from models import CompanyComparison
+    comp = CompanyComparison.query.get_or_404(id)
+    db.session.delete(comp)
+    db.session.commit()
+    flash('Comparison deleted successfully!', 'success')
+    return redirect(url_for('dashboard', tab='comparison'))
+
 
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required

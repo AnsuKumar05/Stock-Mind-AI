@@ -329,7 +329,7 @@
   <div class="mb-3">
     <label for="investment_amount" class="form-label">Investment Amount (₹)</label>
     <input type="number" class="form-control" id="investment_amount" name="investment_amount" 
-           min="1000" max="1000000000" step="100" placeholder="Enter amount in rupees"
+           min="500" max="1000000000" step="100" placeholder="Enter amount in rupees"
            required value="{{ investment_amount if investment_amount else '' }}">
   </div>
 
@@ -428,7 +428,7 @@
                     <div class="mb-3">
                         <label for="modal_investment_amount" class="form-label">New Investment Amount (₹)</label>
                         <input type="number" class="form-control" id="modal_investment_amount" name="investment_amount" 
-                               min="1000" max="10000000" step="100" required>
+                               min="500" max="1000000000" step="100"placeholder="Enter amount in rupees" required>
                     </div>
                 </div>
                 <div class="modal-footer">

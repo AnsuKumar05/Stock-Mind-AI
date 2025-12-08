@@ -10,5 +10,4 @@ numpy
 scikit-learn
 numba
 reportlab
-apscheduler
-openai
+pdfkit

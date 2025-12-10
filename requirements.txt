@@ -10,4 +10,5 @@ numpy
 scikit-learn
 numba
 reportlab
-pdfkit
+apscheduler
+flask-migrate

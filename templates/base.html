@@ -5,20 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AI Stock Market Analyzer{% endblock %}</title>
     
-    <!-- Bootstrap CSS - Replit themed -->
-    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
 </head>
 <body>
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
                 <i class="fas fa-chart-line me-2"></i>
                 AI Stock Analyzer
             </a>
@@ -37,7 +35,17 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('upload_file') }}">
-                            <i class="fas fa-upload me-1"></i>Upload & Predict
+                            <i class="fas fa-upload me-1"></i>Upload CSV
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('investment_prediction') }}">
+                            <i class="fas fa-money-bill-trend-up me-1"></i>Investment Prediction
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('company_comparison') }}">
+                            <i class="fas fa-balance-scale me-1"></i>Compare Companies
                         </a>
                     </li>
                     {% endif %}
@@ -46,14 +54,10 @@
                 <ul class="navbar-nav">
                     {% if session.user_id %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i>{{ session.username }}
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i>{{ session.username or 'User' }}
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('dashboard') }}">
-                                <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('logout') }}">
                                 <i class="fas fa-sign-out-alt me-1"></i>Logout
                             </a></li>
@@ -71,57 +75,45 @@
         </div>
     </nav>
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="container mt-3">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                        {% if category == 'success' %}
-                            <i class="fas fa-check-circle me-2"></i>
-                        {% elif category == 'danger' %}
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                        {% elif category == 'warning' %}
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                        {% elif category == 'info' %}
-                            <i class="fas fa-info-circle me-2"></i>
-                        {% endif %}
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-
     <!-- Main Content -->
-    <main class="py-4">
+    <main class="container mt-4">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+            <i class="fas fa-{{ 'exclamation-triangle' if category in ['danger', 'error'] else 'info-circle' if category == 'info' else 'check-circle' if category == 'success' else 'exclamation-circle' }} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
         {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-light py-4 mt-5">
+    <footer class="bg-dark text-light mt-5 py-4">
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
-                    <h6><i class="fas fa-chart-line me-2"></i>AI Stock Market Analyzer</h6>
-                    <p class="text-muted mb-0">Powered by advanced machine learning algorithms</p>
+                    <h5><i class="fas fa-chart-line me-2"></i>AI Stock Market Analyzer</h5>
+                    <p class="mb-0">Advanced machine learning predictions for stock market analysis.</p>
                 </div>
-                <div class="col-md-6 text-md-end">
-                    <p class="text-muted mb-0">
-                        <i class="fas fa-shield-alt me-1"></i>
-                        Secure • Accurate • Fast
-                    </p>
+                <div class="col-md-6 text-end">
+                    <p class="mb-0">&copy; 2025 AI Stock Analyzer. All rights reserved.</p>
                 </div>
             </div>
         </div>
     </footer>
 
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     
     {% block scripts %}{% endblock %}
 </body>

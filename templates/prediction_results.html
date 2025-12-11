@@ -3,305 +3,343 @@
 {% block title %}Prediction Results - AI Stock Market Analyzer{% endblock %}
 
 {% block content %}
-<div class="container">
-    {% if results.success %}
-    <!-- Success Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card bg-success text-white">
-                <div class="card-body text-center">
-                    <h3 class="mb-2">
-                        <i class="fas fa-check-circle me-2"></i>
-                        Prediction Complete!
-                    </h3>
-                    <p class="mb-0 opacity-75">
-                        Your AI-powered stock analysis is ready
-                    </p>
-                </div>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="display-4">
+                    <i class="fas fa-chart-line me-3 text-success"></i>Prediction Results
+                </h1>
+                <p class="lead">AI-powered analysis of your stock data</p>
+            </div>
+            <div>
+                <button onclick="downloadPDF()" class="btn btn-success me-2">
+                    <i class="fas fa-download me-2"></i>Download PDF
+                </button>
+                <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+                    <i class="fas fa-upload me-2"></i>Upload Another File
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                </a>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Main Prediction Results -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    <i class="fas fa-rupee-sign fa-3x text-primary mb-3"></i>
-                    <h6 class="text-muted">Current Price</h6>
-                    <h3 class="text-primary">{{ (results.prediction_details.latest_price or 0)|inr }}</h3>
-                </div>
+<!-- Main Results Card -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-robot me-2"></i>AI Prediction Summary
+                </h4>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    <i class="fas fa-brain fa-3x text-success mb-3"></i>
-                    <h6 class="text-muted">AI Predicted Price</h6>
-                    <h3 class="text-success">{{ (results.predicted_price or 0)|inr }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    {% set predicted_change = results.prediction_details.predicted_change or 0 %}
-                    {% if predicted_change > 0 %}
-                        <i class="fas fa-arrow-up fa-3x text-success mb-3"></i>
-                        <h6 class="text-muted">Predicted Gain</h6>
-                        <h3 class="text-success">+{{ predicted_change|inr }}</h3>
-                        <small class="text-success">(+{{ "%.2f"|format(results.prediction_details.predicted_change_percent or 0) }}%)</small>
-                    {% else %}
-                        <i class="fas fa-arrow-down fa-3x text-danger mb-3"></i>
-                        <h6 class="text-muted">Predicted Loss</h6>
-                        <h3 class="text-danger">{{ predicted_change|inr }}</h3>
-                        <small class="text-danger">({{ "%.2f"|format(results.prediction_details.predicted_change_percent or 0) }}%)</small>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Confidence and Model Info -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-chart-bar me-2"></i>
-                        Prediction Confidence
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>Confidence Level</span>
-                        <strong>{{ "%.1f"|format(results.confidence_score * 100) }}%</strong>
-                    </div>
-                    <div class="progress mb-3" style="height: 25px;">
-                        <div class="progress-bar" role="progressbar" 
-                             style="width: {{ results.confidence_score * 100 }}%"
-                             aria-valuenow="{{ results.confidence_score * 100 }}" 
-                             aria-valuemin="0" aria-valuemax="100">
-                            {{ "%.1f"|format(results.confidence_score * 100) }}%
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="border-end">
+                            <h3 class="text-success mb-1">{{ results.predicted_price|inr }}</h3>
+                            <p class="text-muted mb-0">Predicted Price</p>
                         </div>
                     </div>
-                    <small class="text-muted">
-                        {% if results.confidence_score > 0.7 %}
-                            <i class="fas fa-check-circle text-success me-1"></i>
-                            High confidence prediction
-                        {% elif results.confidence_score > 0.4 %}
-                            <i class="fas fa-exclamation-circle text-warning me-1"></i>
-                            Moderate confidence prediction
-                        {% else %}
-                            <i class="fas fa-exclamation-triangle text-danger me-1"></i>
-                            Low confidence prediction
-                        {% endif %}
-                    </small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-cogs me-2"></i>
-                        Model Information
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <div class="d-flex justify-content-between">
-                                <span>Model Type:</span>
-                                <strong>{{ results.model_type }}</strong>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="d-flex justify-content-between">
-                                <span>Data Points:</span>
-                                <strong>{{ results.prediction_details.data_points_used }}</strong>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="d-flex justify-content-between">
-                                <span>R² Score:</span>
-                                <strong>{{ "%.3f"|format(results.prediction_details.r2_score) }}</strong>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="d-flex justify-content-between">
-                                <span>MAE:</span>
-                                <strong>{{ "%.4f"|format(results.prediction_details.mae) }}</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Detailed Analysis -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-microscope me-2"></i>
-                        Detailed Analysis
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-primary">Features Used</h6>
-                            <div class="mb-3">
-                                {% for feature in results.prediction_details.features_used %}
-                                    <span class="badge bg-secondary me-1 mb-1">{{ feature }}</span>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="text-primary">Model Performance</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <tr>
-                                        <td>Mean Squared Error:</td>
-                                        <td><strong>{{ "%.4f"|format(results.prediction_details.mse) }}</strong></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Mean Absolute Error:</td>
-                                        <td><strong>{{ "%.4f"|format(results.prediction_details.mae) }}</strong></td>
-                                    </tr>
-                                    <tr>
-                                        <td>R² Score:</td>
-                                        <td><strong>{{ "%.3f"|format(results.prediction_details.r2_score) }}</strong></td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if results.prediction_details.model_comparison %}
-                    <hr>
-                    <h6 class="text-primary mb-3">Model Comparison</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Model</th>
-                                    <th>Mean Score</th>
-                                    <th>Std Deviation</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for model_name, model_data in results.prediction_details.model_comparison.items() %}
-                                <tr>
-                                    <td>{{ model_name.title() }}</td>
-                                    <td>{{ "%.3f"|format(model_data.mean_score) }}</td>
-                                    <td>{{ "%.3f"|format(model_data.std_score) }}</td>
-                                    <td>
-                                        {% if model_name.lower() in results.model_type.lower() %}
-                                            <span class="badge bg-success">Selected</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">Available</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- File Information -->
-    {% if upload %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-file-csv me-2"></i>
-                        File Information
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <strong>Original Filename:</strong><br>
-                            <span class="text-muted">{{ upload.original_filename }}</span>
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Upload Date:</strong><br>
-                            <span class="text-muted">{{ upload.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
-                        </div>
-                        <div class="col-md-4">
-                            <strong>File Size:</strong><br>
-                            <span class="text-muted">
-                                {% if upload.file_size %}
-                                    {{ "%.2f"|format(upload.file_size / 1024 / 1024) }} MB
+                    <div class="col-md-4">
+                        <div class="border-end">
+                            <h3 class="mb-1">
+                                {% if results.prediction_details.predicted_change > 0 %}
+                                    <span class="text-success">
+                                        <i class="fas fa-arrow-up me-1"></i>
+                                        +{{ results.prediction_details.predicted_change|inr }}
+                                    </span>
                                 {% else %}
-                                    Unknown
+                                    <span class="text-danger">
+                                        <i class="fas fa-arrow-down me-1"></i>
+                                        {{ results.prediction_details.predicted_change|inr }}
+                                    </span>
                                 {% endif %}
-                            </span>
+                            </h3>
+                            <p class="text-muted mb-0">Expected Change</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h3 class="mb-1">
+                            {% if results.prediction_details.predicted_change_percent > 0 %}
+                                <span class="text-success">+{{ "%.2f"|format(results.prediction_details.predicted_change_percent) }}%</span>
+                            {% else %}
+                                <span class="text-danger">{{ "%.2f"|format(results.prediction_details.predicted_change_percent) }}%</span>
+                            {% endif %}
+                        </h3>
+                        <p class="text-muted mb-0">Percentage Change</p>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Current Price:</strong> {{ results.prediction_details.latest_price|inr }}</p>
+                        <p><strong>Model Used:</strong> {{ results.model_type }}</p>
+                        <p><strong>Data Points:</strong> {{ results.prediction_details.data_points_used }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Confidence Score:</strong></p>
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ (results.confidence_score * 100)|round }}%">
+                                {{ (results.confidence_score * 100)|round }}%
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
-
-    <!-- Action Buttons -->
-<div class="row">
-    <div class="col-12 text-center">
-        <!-- Upload Button -->
-        <a href="{{ url_for('upload_file') }}" class="btn btn-primary me-2">
-            <i class="fas fa-upload me-2"></i>
-            Upload Another File
-        </a>
-
-        <!-- Back to Dashboard -->
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary me-2">
-            <i class="fas fa-tachometer-alt me-2"></i>
-            Back to Dashboard
-        </a>
-
-        <!-- Download Button -->
-        <a href="{{ url_for('download_prediction', prediction_id=prediction.id) }}" class="btn btn-success">
-            <i class="fas fa-download me-2"></i>
-            Download File
-        </a>
+    
+    <!-- File Info Card -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-csv me-2"></i>File Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Original Name:</strong><br>{{ upload.original_filename }}</p>
+                <p><strong>File Size:</strong><br>{{ "%.2f"|format(upload.file_size / 1024 / 1024) }} MB</p>
+                <p><strong>Upload Time:</strong><br>{{ upload.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                <p><strong>Features Used:</strong><br>{{ results.prediction_details.features_used }}</p>
+            </div>
+        </div>
     </div>
 </div>
 
-    {% else %}
-    <!-- Error State -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Prediction Failed
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-danger">{{ results.error }}</p>
-                    <div class="text-center">
-                        <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
-                            <i class="fas fa-upload me-2"></i>
-                            Try Again
-                        </a>
+<!-- Technical Analysis -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>Technical Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Model Accuracy</h6>
+                                <h4 class="text-primary">{{ (results.prediction_details.r2_score * 100)|round }}%</h4>
+                                <p class="card-text small">R² Score</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Mean Squared Error</h6>
+                                <h4 class="text-warning">{{ "%.4f"|format(results.prediction_details.mse) }}</h4>
+                                <p class="card-text small">Lower is better</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Mean Absolute Error</h6>
+                                <h4 class="text-info">{{ "%.4f"|format(results.prediction_details.mae) }}</h4>
+                                <p class="card-text small">Average prediction error</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
 </div>
+
+<!-- Model Comparison -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-balance-scale me-2"></i>Model Performance Comparison
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if results.prediction_details.model_comparison %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>R² Score</th>
+                                <th>Performance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model, score in results.prediction_details.model_comparison.items() %}
+                            <tr class="{{ 'table-success' if model in results.model_type.lower() else '' }}">
+                                <td>
+                                    {{ model.title() }}
+                                    {% if model in results.model_type.lower() %}
+                                        <span class="badge bg-success ms-2">Selected</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ "%.3f"|format(score) }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: {{ ((score + 1) * 50)|round }}%">
+                                             {{ (score * 100)|round }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Model comparison data not available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Investment Recommendation -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Investment Recommendation
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        {% if results.prediction_details.predicted_change_percent > 0 %}
+                        <div class="alert alert-success">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-thumbs-up me-2"></i>Positive Outlook
+                            </h6>
+                            <p class="mb-2">Based on our AI analysis, the stock shows potential for growth with a predicted increase of {{ "%.2f"|format(results.prediction_details.predicted_change_percent) }}%.</p>
+                            <hr>
+                            <p class="mb-0"><strong>Recommendation:</strong> Consider this as a potential investment opportunity, but always do additional research and consider your risk tolerance.</p>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Cautious Outlook
+                            </h6>
+                            <p class="mb-2">Our analysis suggests a potential decline of {{ "%.2f"|format(results.prediction_details.predicted_change_percent|abs) }}%. Exercise caution with this investment.</p>
+                            <hr>
+                            <p class="mb-0"><strong>Recommendation:</strong> Consider waiting for better market conditions or diversifying your investment portfolio.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Confidence Level</h6>
+                        {% set confidence_percent = (results.confidence_score * 100)|round %}
+                        {% if confidence_percent > 80 %}
+                            <span class="badge bg-success fs-6">High ({{ confidence_percent }}%)</span>
+                            <p class="small mt-2">Very reliable prediction</p>
+                        {% elif confidence_percent > 60 %}
+                            <span class="badge bg-warning fs-6">Medium ({{ confidence_percent }}%)</span>
+                            <p class="small mt-2">Moderately reliable</p>
+                        {% else %}
+                            <span class="badge bg-danger fs-6">Low ({{ confidence_percent }}%)</span>
+                            <p class="small mt-2">Use with caution</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Next Steps -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-route me-2"></i>What's Next?
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <a href="{{ url_for('investment_prediction') }}" class="btn btn-success btn-lg">
+                            <i class="fas fa-money-bill-trend-up fa-2x d-block mb-2"></i>
+                            Investment Prediction
+                        </a>
+                        <p class="small mt-2">Get specific investment amount predictions</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <a href="{{ url_for('company_comparison') }}" class="btn btn-warning btn-lg">
+                            <i class="fas fa-balance-scale fa-2x d-block mb-2"></i>
+                            Compare Companies
+                        </a>
+                        <p class="small mt-2">Compare with other investment options</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <a href="{{ url_for('upload_file') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-upload fa-2x d-block mb-2"></i>
+                            Upload More Data
+                        </a>
+                        <p class="small mt-2">Analyze additional stock data</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function downloadPDF() {
+    // Prepare prediction data for PDF generation
+    const predictionData = {
+        type: 'stock_prediction',
+        predicted_price: {{ results.predicted_price }},
+        confidence_score: {{ results.confidence_score }},
+        model_type: '{{ results.model_type }}',
+        prediction_details: {{ results.prediction_details|tojson }}
+    };
+    
+    // Submit and download
+    fetch('{{ url_for("download_current_prediction_pdf") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(predictionData)
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.blob();
+        }
+        throw new Error('PDF generation failed');
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'stock_prediction_results.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    })
+    .catch(error => {
+        console.error('Error downloading PDF:', error);
+        alert('Error downloading PDF. Please try again.');
+    });
+}
+</script>
+
 {% endblock %}

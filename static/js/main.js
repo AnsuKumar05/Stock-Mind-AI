@@ -56,15 +56,6 @@ function initializeBootstrap() {
         return new bootstrap.Popover(popoverTriggerEl);
     });
     
-    // Auto-hide alerts after 5 seconds
-    setTimeout(function() {
-        const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
-        alerts.forEach(function(alert) {
-            const bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
-        });
-    }, 5000);
-}
 
 /**
  * Setup form validations

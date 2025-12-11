@@ -217,22 +217,20 @@ def dashboard():
     """User dashboard showing full prediction history"""
     try:
         user_id = session['user_id']
-        from_delete = request.args.get('from_delete')  # detect redirect source
 
-        # 🔒 Skip any CSV analysis or background predictor triggers after deletion
-        if from_delete:
-            app.logger.info(f"Dashboard reloaded after {from_delete} deletion — skipping CSV analysis.")
+        # get requested tab from query string (default to 'csv')
+        requested_tab = request.args.get('tab', 'csv')
+        # normalize values (in case you used 'prediction' earlier)
+        if requested_tab == 'prediction':
+            requested_tab = 'csv'
 
-        # Get all predictions for this user (newest first)
+        # fetch data as before
         recent_predictions = Prediction.query.filter_by(user_id=user_id).order_by(Prediction.created_at.desc()).all()
-
-        # Get all investment predictions
         recent_investments = InvestmentPrediction.query.filter_by(user_id=user_id).order_by(InvestmentPrediction.created_at.desc()).all()
-
-        # Get all company comparisons
         recent_comparisons = CompanyComparison.query.filter_by(user_id=user_id).order_by(CompanyComparison.created_at.desc()).all()
+        uploads = Upload.query.filter_by(user_id=user_id).order_by(Upload.created_at.desc()).all()
 
-        # Process prediction data for template
+        # existing processing of predictions -> processed_predictions ...
         processed_predictions = []
         for prediction in recent_predictions:
             prediction_info = {
@@ -246,8 +244,6 @@ def dashboard():
                 'predicted_change': None,
                 'predicted_change_percent': None
             }
-
-            # Parse prediction data safely
             if prediction.prediction_data:
                 try:
                     import ast
@@ -256,20 +252,15 @@ def dashboard():
                     prediction_info['predicted_change'] = details.get('predicted_change', prediction.predicted_price - prediction_info['latest_price'])
                     prediction_info['predicted_change_percent'] = details.get('predicted_change_percent', 0)
                 except Exception:
-                    # Fallback values if parsing fails
                     prediction_info['latest_price'] = prediction.predicted_price * 0.95
                     prediction_info['predicted_change'] = prediction.predicted_price - prediction_info['latest_price']
                     prediction_info['predicted_change_percent'] = (prediction_info['predicted_change'] / prediction_info['latest_price'] * 100)
             else:
-                # Fallback values if no prediction data
                 prediction_info['latest_price'] = prediction.predicted_price * 0.95
                 prediction_info['predicted_change'] = prediction.predicted_price - prediction_info['latest_price']
                 prediction_info['predicted_change_percent'] = (prediction_info['predicted_change'] / prediction_info['latest_price'] * 100)
 
             processed_predictions.append(prediction_info)
-
-        # Get full upload history (newest first)
-        uploads = Upload.query.filter_by(user_id=user_id).order_by(Upload.created_at.desc()).all()
 
         app.logger.info(f"Dashboard loaded for user {user_id} with {len(processed_predictions)} predictions")
 
@@ -278,7 +269,8 @@ def dashboard():
             predictions=processed_predictions,
             uploads=uploads,
             investment_predictions=recent_investments,
-            company_comparisons=recent_comparisons
+            company_comparisons=recent_comparisons,
+            active_tab=requested_tab
         )
 
     except Exception as e:
@@ -294,7 +286,8 @@ def delete_prediction(id):
     db.session.delete(pred)
     db.session.commit()
     flash('Prediction deleted successfully!', 'success')
-    return redirect(url_for('dashboard', tab='prediction'))
+    # redirect to CSV tab
+    return redirect(url_for('dashboard', tab='csv'))
 
 @app.route('/delete_investment/<int:id>', methods=['POST'])
 def delete_investment(id):
@@ -303,6 +296,7 @@ def delete_investment(id):
     db.session.delete(invest)
     db.session.commit()
     flash('Investment deleted successfully!', 'success')
+    # redirect to Investment tab
     return redirect(url_for('dashboard', tab='investment'))
 
 @app.route('/delete_comparison/<int:id>', methods=['POST'])
@@ -312,7 +306,9 @@ def delete_comparison(id):
     db.session.delete(comp)
     db.session.commit()
     flash('Comparison deleted successfully!', 'success')
+    # redirect to Comparison tab
     return redirect(url_for('dashboard', tab='comparison'))
+
 
 # --- VIEW ROUTES FOR DASHBOARD ITEMS ---
 

@@ -264,3 +264,39 @@ footer {
     .no-wrap {
     white-space: nowrap !important;
 }
+.footer-dark {
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #eaeaea;
+    padding: 40px 0;
+    font-size: 14px;
+}
+
+.footer-title {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+}
+
+.footer-caption {
+    margin-top: 8px;
+    max-width: 480px;
+    color: #cfd8dc;
+    line-height: 1.6;
+}
+
+.footer-credit {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.creator-link {
+    color: #4dd0e1;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.creator-link:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}

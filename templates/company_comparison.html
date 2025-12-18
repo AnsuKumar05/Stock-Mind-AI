@@ -435,23 +435,40 @@
                         </div>
                     </div>
                     
-                    <div class="row mt-4">
-                        <div class="col-md-6 mx-auto">
-                            <div class="mb-4">
-                                <label for="time_horizon" class="form-label">
-                                    <i class="fas fa-clock me-1"></i>Time Horizon for Comparison
-                                </label>
-                                <select class="form-select" id="time_horizon" name="time_horizon" required>
-                                    <option value="1_week">1 Week</option>
-                                    <option value="1_month" selected>1 Month</option>
-                                    <option value="1_year">1 Year</option>
-                                </select>
-                                <div class="form-text">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    Select the time period for comparison analysis
-                                </div>
-                            </div>
-                            
+                <div class="row mt-4">
+    <div class="col-md-6 mx-auto">
+        <div class="mb-4">
+
+            <label class="form-label">
+                <i class="fas fa-clock me-1"></i>Time Horizon for Comparison
+            </label>
+
+            <div class="input-group">
+                <input type="number" class="form-control" id="time_value" min="1" value="1" oninput="updateTimeHorizon()"  required>
+                   <select class="form-select" id="time_unit" onchange="updateTimeHorizon()">
+                     <option value="day" selected>Day</option>
+                     <option value="week">Week</option>
+                     <option value="month">Month</option>
+                     <option value="year">Year</option>
+                </select>
+            
+            </div>
+
+            <!-- Hidden field sent to backend -->
+            <input type="hidden" id="time_horizon_days" name="time_horizon_days" value="1">
+            <input type="hidden" id="time_horizon_text" name="time_horizon_text">
+
+
+
+            <div class="form-text">
+                <i class="fas fa-info-circle me-1"></i>
+                Enter the time period for comparison analysis
+            </div>
+
+        </div>
+    </div>
+</div>
+
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-warning btn-lg">
                                     <i class="fas fa-balance-scale me-2"></i>Compare Companies
@@ -641,7 +658,6 @@ function updateCompanyPreview(selectElement, previewId, nameId, symbolId, priceI
 document.getElementById('company1_id').addEventListener('change', function() {
     updateCompanyPreview(this, 'company1Preview', 'company1Name', 'company1Symbol', 'company1Price', 'company1Sector');
     
-    // Update company2 options to exclude selected company1
     const company1Value = this.value;
     const company2Select = document.getElementById('company2_id');
     const company2Options = company2Select.querySelectorAll('option');
@@ -656,7 +672,6 @@ document.getElementById('company1_id').addEventListener('change', function() {
         }
     });
     
-    // Clear company2 if same as company1
     if (company2Select.value === company1Value) {
         company2Select.value = '';
         document.getElementById('company2Preview').style.display = 'none';
@@ -666,7 +681,6 @@ document.getElementById('company1_id').addEventListener('change', function() {
 document.getElementById('company2_id').addEventListener('change', function() {
     updateCompanyPreview(this, 'company2Preview', 'company2Name', 'company2Symbol', 'company2Price', 'company2Sector');
     
-    // Update company1 options to exclude selected company2
     const company2Value = this.value;
     const company1Select = document.getElementById('company1_id');
     const company1Options = company1Select.querySelectorAll('option');
@@ -681,7 +695,6 @@ document.getElementById('company2_id').addEventListener('change', function() {
         }
     });
     
-    // Clear company1 if same as company2
     if (company1Select.value === company2Value) {
         company1Select.value = '';
         document.getElementById('company1Preview').style.display = 'none';
@@ -699,8 +712,42 @@ document.querySelector('#newComparisonModal form').addEventListener('submit', fu
         return false;
     }
 });
+// Update time horizon based on user input
+function updateTimeHorizon() {
+    const value = parseInt(document.getElementById('time_value').value || 1);
+    const unit = document.getElementById('time_unit').value;
 
-// PDF download function for company comparison
+    let days = 1;
+    let text = '';
+
+    if (unit === 'day') {
+        days = value;
+        text = `${value} ${value === 1 ? 'Day' : 'Days'}`;
+    } else if (unit === 'week') {
+        days = value * 7;
+        text = `${value} ${value === 1 ? 'Week' : 'Weeks'}`;
+    } else if (unit === 'month') {
+        days = value * 30;
+        text = `${value} ${value === 1 ? 'Month' : 'Months'}`;
+    } else if (unit === 'year') {
+        days = value * 365;
+        text = `${value} ${value === 1 ? 'Year' : 'Years'}`;
+    }
+
+    document.getElementById('time_horizon_days').value = days;
+    document.getElementById('time_horizon_text').value = text;
+}
+document.addEventListener('DOMContentLoaded', function () {
+    const comparisonForm = document.getElementById('comparisonForm');
+    if (comparisonForm) {
+        comparisonForm.addEventListener('submit', function () {
+            updateTimeHorizon();
+        });
+    }
+});
+
+
+// PDF download function
 function downloadComparisonPDF() {
     {% if results %}
     const comparisonData = {
@@ -709,10 +756,10 @@ function downloadComparisonPDF() {
         company2_predicted_return: {{ results.company2_predicted_return }},
         recommended_company: {{ results.recommended_company }},
         confidence_score: {{ results.confidence_score }},
-        time_horizon: '{{ results.time_horizon }}',
-        comparison_details: {{ results.comparison_details|tojson }}
+        time_horizon: {{ results.time_horizon | tojson }} || 'N/A',
+        comparison_details: {{ results.comparison_details | tojson }}
     };
-    
+
     fetch('{{ url_for("download_current_prediction_pdf") }}', {
         method: 'POST',
         headers: {
@@ -721,10 +768,8 @@ function downloadComparisonPDF() {
         body: JSON.stringify(comparisonData)
     })
     .then(response => {
-        if (response.ok) {
-            return response.blob();
-        }
-        throw new Error('PDF generation failed');
+        if (!response.ok) throw new Error('PDF generation failed');
+        return response.blob();
     })
     .then(blob => {
         const url = window.URL.createObjectURL(blob);
@@ -744,4 +789,5 @@ function downloadComparisonPDF() {
     {% endif %}
 }
 </script>
+
 {% endblock %}

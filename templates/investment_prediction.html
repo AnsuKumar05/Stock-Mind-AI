@@ -127,12 +127,7 @@
                 
                 <div class="mb-3">
                     <small class="text-muted">Time Horizon</small>
-                    <p class="mb-0">
-                        {% if results.time_horizon == '1_week' %}1 Week
-                        {% elif results.time_horizon == '1_month' %}1 Month
-                        {% elif results.time_horizon == '1_year' %}1 Year
-                        {% endif %}
-                    </p>
+                      <p class="mb-0">{{ results.time_horizon }}</p>
                 </div>
             </div>
         </div>
@@ -329,18 +324,36 @@
   <div class="mb-3">
     <label for="investment_amount" class="form-label">Investment Amount (₹)</label>
     <input type="number" class="form-control" id="investment_amount" name="investment_amount" 
-           min="500" max="1000000000" step="100" placeholder="Enter amount in rupees"
+           min="500" max="1000000000000000000000" placeholder="Enter amount in rupees"
            required value="{{ investment_amount if investment_amount else '' }}">
   </div>
 
   <div class="mb-3">
-    <label for="time_horizon" class="form-label">Time Horizon</label>
-    <select class="form-select" id="time_horizon" name="time_horizon">
-      <option value="1_week">1 Week</option>
-      <option value="1_month" selected>1 Month</option>
-      <option value="1_year">1 Year</option>
-    </select>
-  </div>
+    <label class="form-label">
+        <i class="fas fa-clock me-1"></i>Time Horizon
+    </label>
+
+    <div class="input-group">
+        <input type="number"class="form-control"id="time_value"min="1"value="1"oninput="updateInvestmentTimeHorizon()"required>
+        <select class="form-select"id="time_unit"onchange="updateInvestmentTimeHorizon()">
+            <option value="day">Day</option>
+            <option value="week">Week</option>
+            <option value="month" selected>Month</option>
+            <option value="year">Year</option>
+        </select>
+    </div>
+
+    <!-- Hidden fields sent to backend -->
+    <input type="hidden" id="time_horizon_days" name="time_horizon_days" value="30">
+    <input type="hidden" id="time_horizon_text" name="time_horizon_text" value="1 Month">
+
+
+    <div class="form-text">
+        <i class="fas fa-info-circle me-1"></i>
+        Enter the investment duration
+    </div>
+</div>
+
 
                     <!-- Preview Card -->
                     <div class="card bg-light mb-4" id="previewCard" style="display: none;">
@@ -499,7 +512,30 @@ document.getElementById('investment_amount').addEventListener('input', function(
         this.value = value;
     }
 });
+function updateInvestmentTimeHorizon() {
+    const value = parseInt(document.getElementById('time_value').value || 1);
+    const unit = document.getElementById('time_unit').value;
 
+    let days = value;
+    let label = '';
+
+    if (unit === 'day') {
+        days = value;
+        label = value + (value === 1 ? ' Day' : ' Days');
+    } else if (unit === 'week') {
+        days = value * 7;
+        label = value + (value === 1 ? ' Week' : ' Weeks');
+    } else if (unit === 'month') {
+        days = value * 30;
+        label = value + (value === 1 ? ' Month' : ' Months');
+    } else if (unit === 'year') {
+        days = value * 365;
+        label = value + (value === 1 ? ' Year' : ' Years');
+    }
+
+    document.getElementById('time_horizon_days').value = days;
+    document.getElementById('time_horizon_text').value = label;
+}
 // PDF download function for investment prediction
 function downloadInvestmentPDF() {
     {% if results %}

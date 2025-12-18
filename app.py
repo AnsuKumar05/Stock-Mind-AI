@@ -20,6 +20,7 @@ import json
 from seed_companies import initialize_companies
 from flask_migrate import Migrate
 from dotenv import load_dotenv
+import traceback
 load_dotenv()
 from seed_companies import update_company_data  # make sure your update function is imported
 
@@ -406,7 +407,7 @@ def view_investment(id):
         db.session.add(new_invest)
         db.session.commit()
 
-        # Render the same results page with the new amount
+     
         return render_template(
             'investment_prediction.html',
             companies=companies,
@@ -415,7 +416,7 @@ def view_investment(id):
             investment_amount=new_amount,
         )
 
-    # ---------- NORMAL VIEW (GET) ----------
+    
     try:
         details = json.loads(investment.prediction_details) if investment.prediction_details else {}
     except Exception:
@@ -673,7 +674,9 @@ def investment_prediction():
         try:
             company_id = request.form.get('company_id')
             investment_amount = float(request.form.get('investment_amount', 0))
-            time_horizon = request.form.get('time_horizon', '1_month')
+            time_horizon = request.form.get('time_horizon_text', 'N/A')
+
+
             
             if not company_id or investment_amount <= 0:
                 flash('Please select a company and enter a valid investment amount.', 'danger')
@@ -744,31 +747,34 @@ def investment_prediction():
 @app.route('/company_comparison', methods=['GET', 'POST'])
 @login_required
 def company_comparison():
-    """Handle company comparison feature"""
     companies = Company.query.all()
-    
+
     if request.method == 'POST':
         try:
             company1_id = request.form.get('company1_id')
             company2_id = request.form.get('company2_id')
-            time_horizon = request.form.get('time_horizon', '1_month')
-            
+
+         
+            time_horizon_days = request.form.get('time_horizon_days', type=int)
+            time_horizon = request.form.get('time_horizon_text', 'N/A')
+
+
+
             if not company1_id or not company2_id:
-                flash('Please select both companies for comparison.', 'danger')
+                flash('Please select both companies.', 'danger')
                 return redirect(request.url)
-            
+
             if company1_id == company2_id:
-                flash('Please select two different companies for comparison.', 'danger')
+                flash('Please select two different companies.', 'danger')
                 return redirect(request.url)
-            
+
             company1 = Company.query.get(company1_id)
             company2 = Company.query.get(company2_id)
-            
+
             if not company1 or not company2:
                 flash('Invalid company selection.', 'danger')
                 return redirect(request.url)
-            
-            # Prepare company data for comparison
+
             company1_data = {
                 'name': company1.name,
                 'current_price': company1.current_price,
@@ -777,7 +783,7 @@ def company_comparison():
                 'sector': company1.sector,
                 'historical_data': company1.historical_data
             }
-            
+
             company2_data = {
                 'name': company2.name,
                 'current_price': company2.current_price,
@@ -786,45 +792,53 @@ def company_comparison():
                 'sector': company2.sector,
                 'historical_data': company2.historical_data
             }
-            
-            # Make comparison
+
             predictor = StockPredictor()
-            results = predictor.compare_companies(company1_data, company2_data, time_horizon)
+
             
-            if results['success']:
-                # Convert and serialize comparison results properly
-                converted_results = convert_numpy_types(results)
-                
-                # Save comparison results
-                comparison = CompanyComparison()
-                comparison.user_id = session['user_id']
-                comparison.company1_id = company1.id
-                comparison.company2_id = company2.id
-                comparison.company1_predicted_return = converted_results['company1_predicted_return']
-                comparison.company2_predicted_return = converted_results['company2_predicted_return']
-                comparison.recommended_company_id = company1.id if converted_results['recommended_company'] == 1 else company2.id
-                comparison.confidence_score = converted_results['confidence_score']
-                comparison.time_horizon = converted_results['time_horizon']
-                comparison.comparison_details = serialize_prediction_data(converted_results['comparison_details'])
-                
-                db.session.add(comparison)
-                db.session.commit()
-                
-                flash('Company comparison completed successfully!', 'success')
-                return render_template('company_comparison.html',
-                                     companies=companies,
-                                     results=converted_results,
-                                     company1=company1,
-                                     company2=company2)
-            else:
-                flash(f'Comparison failed: {results.get("error", "Unknown error")}', 'danger')
+            results = predictor.compare_companies(
+                company1_data,
+                company2_data,
+                time_horizon
+            )
+
+            if not results.get('success'):
+                flash(results.get('error', 'Comparison failed.'), 'danger')
                 return redirect(request.url)
-                
+
+            results = convert_numpy_types(results)
+            results["time_horizon"] = time_horizon
+
+            comparison = CompanyComparison(
+                user_id=session['user_id'],
+                company1_id=company1.id,
+                company2_id=company2.id,
+                company1_predicted_return=results['company1_predicted_return'],
+                company2_predicted_return=results['company2_predicted_return'],
+                recommended_company_id=company1.id if results['recommended_company'] == 1 else company2.id,
+                confidence_score=results['confidence_score'],
+                time_horizon=results['time_horizon'],
+                comparison_details=serialize_prediction_data(results['comparison_details'])
+            )
+
+            db.session.add(comparison)
+            db.session.commit()
+
+            flash('Company comparison completed successfully!', 'success')
+            return render_template(
+                'company_comparison.html',
+                companies=companies,
+                results=results,
+                company1=company1,
+                company2=company2
+            )
+
         except Exception as e:
-            app.logger.error(f"Company comparison error: {e}")
+            import traceback
+            traceback.print_exc()
             flash(f'Comparison failed: {str(e)}', 'danger')
             return redirect(request.url)
-    
+
     return render_template('company_comparison.html', companies=companies)
 
 # PDF Download Routes
@@ -912,10 +926,8 @@ def download_current_prediction_pdf():
     try:
         prediction_data = request.json
         prediction_type = prediction_data.get('type', 'stock_prediction')
-        
-        if not prediction_data:
-            return jsonify({'error': 'No prediction data provided'}), 400
-        
+        prediction_data.setdefault('time_horizon', 'N/A')
+
         # Generate PDF
         pdf_buffer = generate_prediction_pdf(prediction_data, prediction_type)
         

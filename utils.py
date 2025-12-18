@@ -9,25 +9,34 @@ import pandas as pd
 from datetime import datetime, date
 from io import BytesIO
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Table,
+    TableStyle,
+    Paragraph,
+    Spacer
+)
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.graphics.charts.lineplots import LinePlot
-from reportlab.graphics.shapes import Drawing
 import logging
+
+
+# ============================================================
+# NUMPY / PANDAS SAFE CONVERSION
+# ============================================================
 
 def convert_numpy_types(obj):
     """
-    Recursively convert numpy data types to native Python types
-    This prevents database insertion errors with PostgreSQL
+    Recursively convert numpy / pandas data types
+    into native Python types (DB + JSON safe)
     """
     if isinstance(obj, dict):
-        return {key: convert_numpy_types(value) for key, value in obj.items()}
+        return {k: convert_numpy_types(v) for k, v in obj.items()}
     elif isinstance(obj, list):
-        return [convert_numpy_types(item) for item in obj]
+        return [convert_numpy_types(i) for i in obj]
     elif isinstance(obj, tuple):
-        return tuple(convert_numpy_types(item) for item in obj)
+        return tuple(convert_numpy_types(i) for i in obj)
     elif isinstance(obj, np.integer):
         return int(obj)
     elif isinstance(obj, np.floating):
@@ -40,228 +49,206 @@ def convert_numpy_types(obj):
         return obj
     elif pd.isna(obj):
         return None
-    else:
-        return obj
+    return obj
+
 
 def serialize_prediction_data(data):
     """
-    Serialize prediction data to JSON string with proper type conversion
+    Serialize prediction data safely into JSON
     """
     try:
-        converted_data = convert_numpy_types(data)
-        return json.dumps(converted_data, default=str, indent=2)
+        return json.dumps(convert_numpy_types(data), indent=2, default=str)
     except Exception as e:
-        logging.error(f"Error serializing prediction data: {e}")
-        return json.dumps({"error": "Serialization failed"}, default=str)
+        logging.error(f"Serialization error: {e}")
+        return json.dumps({"error": "Serialization failed"})
+
+
+def format_time_horizon(value):
+    """
+    Normalize time horizon for PDF display
+    Accepts:
+      - "1 Day"
+      - "2 Weeks"
+      - "3 Months"
+      - "1 Year"
+    """
+    if not value:
+        return "N/A"
+
+    value = str(value).strip()
+    return value.replace("_", " ").title()
 
 def generate_prediction_pdf(prediction_data, prediction_type="stock_prediction"):
     """
-    Generate PDF report for prediction results
-    
-    Args:
-        prediction_data (dict): The prediction results data
-        prediction_type (str): Type of prediction ('stock_prediction', 'investment_prediction', 'company_comparison')
-        
-    Returns:
-        BytesIO: PDF file buffer
+    Generate a professional PDF report for predictions
     """
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, 
-                          rightMargin=72, leftMargin=72, 
-                          topMargin=72, bottomMargin=18)
-    
-    # Create styles
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=18,
-        spaceAfter=30,
-        textColor=colors.darkblue,
-        alignment=1  # Center alignment
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=36
     )
-    
-    heading_style = ParagraphStyle(
-        'CustomHeading',
-        parent=styles['Heading2'],
-        fontSize=14,
-        spaceAfter=12,
+
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        name="TitleStyle",
+        parent=styles["Heading1"],
+        alignment=1,
+        fontSize=18,
+        spaceAfter=20,
         textColor=colors.darkgreen
     )
-    
+
+    heading_style = ParagraphStyle(
+        name="HeadingStyle",
+        parent=styles["Heading2"],
+        fontSize=14,
+        spaceAfter=10,
+        textColor=colors.darkblue
+    )
+
     content = []
-    
-    # Title based on prediction type
-    if prediction_type == "stock_prediction":
-        title = "Stock Price Prediction Report"
-    elif prediction_type == "investment_prediction":
-        title = "Investment Profitability Report"
-    elif prediction_type == "company_comparison":
-        title = "Company Comparison Report"
-    else:
-        title = "AI Stock Analysis Report"
-    
-    content.append(Paragraph(title, title_style))
-    content.append(Spacer(1, 20))
-    
-    # Add timestamp
+
+    # -------- TITLE --------
+    title_map = {
+        "stock_prediction": "Stock Price Prediction Report",
+        "investment_prediction": "Investment Profitability Report",
+        "company_comparison": "Company Comparison Report"
+    }
+
+    content.append(Paragraph(
+        title_map.get(prediction_type, "AI Stock Analysis Report"),
+        title_style
+    ))
+
     timestamp = datetime.now().strftime("%B %d, %Y at %I:%M %p")
-    content.append(Paragraph(f"Generated on: {timestamp}", styles['Normal']))
+    content.append(Paragraph(f"Generated on: {timestamp}", styles["Normal"]))
     content.append(Spacer(1, 20))
-    
-    # Add content based on prediction type
+
+    # -------- BODY --------
     if prediction_type == "stock_prediction":
         content.extend(_add_stock_prediction_content(prediction_data, styles, heading_style))
+
     elif prediction_type == "investment_prediction":
         content.extend(_add_investment_prediction_content(prediction_data, styles, heading_style))
+
     elif prediction_type == "company_comparison":
         content.extend(_add_company_comparison_content(prediction_data, styles, heading_style))
-    
-    # Add disclaimer
-    content.append(Spacer(1, 30))
+
+    # -------- DISCLAIMER --------
+    content.append(Spacer(1, 25))
     content.append(Paragraph("Disclaimer", heading_style))
-    disclaimer_text = ("This report is generated by AI algorithms for informational purposes only. "
-                      "It should not be considered as financial advice. Always consult with a "
-                      "qualified financial advisor before making investment decisions. Past performance "
-                      "does not guarantee future results.")
-    content.append(Paragraph(disclaimer_text, styles['Normal']))
-    
-    # Build PDF
+    content.append(Paragraph(
+        "This report is generated by AI algorithms for informational purposes only. "
+        "It should not be considered financial advice.",
+        styles["Normal"]
+    ))
+
     doc.build(content)
     buffer.seek(0)
     return buffer
 
 def _add_stock_prediction_content(data, styles, heading_style):
-    """Add stock prediction specific content to PDF"""
     content = []
-    
-    # Prediction Summary
     content.append(Paragraph("Prediction Summary", heading_style))
-    
-    summary_data = [
+
+    d = data.get("prediction_details", {})
+
+    table_data = [
         ["Metric", "Value"],
         ["Predicted Price", f"₹{data.get('predicted_price', 0):,.2f}"],
         ["Confidence Score", f"{data.get('confidence_score', 0):.1%}"],
-        ["Model Type", data.get('model_type', 'N/A')]
+        ["Model Type", data.get("model_type", "N/A")],
+        ["Current Price", f"₹{d.get('latest_price', 0):,.2f}"],
+        ["Predicted Change", f"₹{d.get('predicted_change', 0):,.2f}"],
+        ["Change Percentage", f"{d.get('predicted_change_percent', 0):.2f}%"],
+        ["Data Points Used", str(d.get("data_points_used", 0))]
     ]
-    
-    if 'prediction_details' in data:
-        details = data['prediction_details']
-        summary_data.extend([
-            ["Current Price", f"₹{details.get('latest_price', 0):,.2f}"],
-            ["Predicted Change", f"₹{details.get('predicted_change', 0):,.2f}"],
-            ["Change Percentage", f"{details.get('predicted_change_percent', 0):.2f}%"],
-            ["Data Points Used", str(details.get('data_points_used', 0))]
-        ])
-    
-    summary_table = Table(summary_data)
-    summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 14),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    
-    content.append(summary_table)
+
+    table = Table(table_data, hAlign="LEFT")
+    _apply_table_style(table, header_color=colors.darkblue)
+
+    content.append(table)
     content.append(Spacer(1, 20))
-    
     return content
 
 def _add_investment_prediction_content(data, styles, heading_style):
-    """Add investment prediction specific content to PDF"""
     content = []
-    
-    # Investment Summary
     content.append(Paragraph("Investment Analysis", heading_style))
-    
-    investment_data = [
+
+    table_data = [
         ["Metric", "Value"],
         ["Investment Amount", f"₹{data.get('investment_amount', 0):,.2f}"],
         ["Predicted Return", f"₹{data.get('predicted_return', 0):,.2f}"],
         ["Predicted Profit", f"₹{data.get('predicted_profit', 0):,.2f}"],
         ["Profit Percentage", f"{data.get('profit_percentage', 0):.2f}%"],
-        ["Is Profitable", "Yes" if data.get('is_profitable', False) else "No"],
+        ["Is Profitable", "Yes" if data.get("is_profitable") else "No"],
         ["Confidence Score", f"{data.get('confidence_score', 0):.1%}"],
-        ["Time Horizon", data.get('time_horizon', 'N/A')]
+        ["Time Horizon", format_time_horizon(data.get("time_horizon"))]
     ]
-    
-    investment_table = Table(investment_data)
-    investment_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.darkgreen),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 14),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.lightgrey),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    
-    content.append(investment_table)
+
+    table = Table(table_data, hAlign="LEFT")
+    _apply_table_style(table, header_color=colors.darkgreen)
+
+    content.append(table)
     content.append(Spacer(1, 20))
-    
     return content
+
 
 def _add_company_comparison_content(data, styles, heading_style):
-    """Add company comparison specific content to PDF"""
     content = []
-    
-    # Comparison Summary
     content.append(Paragraph("Company Comparison", heading_style))
-    
-    comparison_data = [
+
+    details = data.get("comparison_details", {})
+
+    table_data = [
         ["Metric", "Company 1", "Company 2"],
-        ["Predicted Return", f"{data.get('company1_predicted_return', 0):.2f}%", 
-         f"{data.get('company2_predicted_return', 0):.2f}%"],
-        ["Recommended", "✓" if data.get('recommended_company') == 1 else "✗", 
-         "✓" if data.get('recommended_company') == 2 else "✗"],
-        ["Confidence Score", f"{data.get('confidence_score', 0):.1%}", f"{data.get('confidence_score', 0):.1%}"],
-        ["Time Horizon", data.get('time_horizon', 'N/A'), data.get('time_horizon', 'N/A')]
+        [
+            "Company Name",
+            details.get("company1", {}).get("name", "N/A"),
+            details.get("company2", {}).get("name", "N/A")
+        ],
+        [
+            "Predicted Return",
+            f"{data.get('company1_predicted_return', 0):.2f}%",
+            f"{data.get('company2_predicted_return', 0):.2f}%"
+        ],
+        [
+            "Recommended",
+            "✓" if data.get("recommended_company") == 1 else "✗",
+            "✓" if data.get("recommended_company") == 2 else "✗"
+        ],
+        [
+            "Confidence Score",
+            f"{data.get('confidence_score', 0):.1%}",
+            f"{data.get('confidence_score', 0):.1%}"
+        ],
+        [
+            "Time Horizon",
+            format_time_horizon(data.get("time_horizon")),
+            format_time_horizon(data.get("time_horizon"))
+        ]
     ]
-    
-    if 'comparison_details' in data:
-        details = data['comparison_details']
-        if 'company1' in details and 'company2' in details:
-            comparison_data.insert(1, ["Company Name", details['company1'].get('name', 'N/A'), 
-                                     details['company2'].get('name', 'N/A')])
-            comparison_data.insert(2, ["Current Price", f"₹{details['company1'].get('current_price', 0):,.2f}", 
-                                     f"₹{details['company2'].get('current_price', 0):,.2f}"])
-    
-    comparison_table = Table(comparison_data)
-    comparison_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 14),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.lightblue),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    
-    content.append(comparison_table)
+
+    table = Table(table_data, hAlign="CENTER")
+    _apply_table_style(table, header_color=colors.darkblue)
+
+    content.append(table)
     content.append(Spacer(1, 20))
-    
     return content
 
-def format_currency(amount):
-    """Format amount as Indian Rupees"""
-    if amount is None:
-        return "₹0.00"
-    try:
-        return f"₹{float(amount):,.2f}"
-    except (ValueError, TypeError):
-        return "₹0.00"
-
-def format_percentage(value):
-    """Format percentage with proper sign"""
-    if value is None:
-        return "0.00%"
-    try:
-        return f"{float(value):+.2f}%"
-    except (ValueError, TypeError):
-        return "0.00%"
+def _apply_table_style(table, header_color):
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), header_color),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
+        ("TOPPADDING", (0, 0), (-1, 0), 10),
+    ]))

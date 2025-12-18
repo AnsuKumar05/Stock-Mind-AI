@@ -98,7 +98,7 @@ function validateInvestmentAmount(input) {
     // Remove commas before parsing
     const value = parseFloat(input.value.replace(/,/g, ''));
     const min = 500;
-    const max = 1000000000;
+    const max = 1000000000000000000000;
 
     let isValid = true;
     let message = '';
@@ -637,19 +637,6 @@ function debounce(func, wait) {
     };
 }
 
-// Throttle function for performance
-function throttle(func, limit) {
-    let inThrottle;
-    return function() {
-        const args = arguments;
-        const context = this;
-        if (!inThrottle) {
-            func.apply(context, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    }
-}
 
 // Check if element is in viewport
 function isInViewport(element) {

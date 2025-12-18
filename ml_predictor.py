@@ -129,8 +129,6 @@ class StockPredictor:
                 'error': f'Error processing file: {str(e)}'
             }
             
-            return convert_numpy_types(result_data)
-            
         except Exception as e:
             logging.error(f"Prediction error: {e}")
             return {
@@ -325,7 +323,7 @@ class StockPredictor:
                     return {'success': False, 'error': f'Error predicting investment profitability: {str(e)}'}
         
        
-    def compare_companies(self, company1_data, company2_data, time_horizon='1_month'):
+    def compare_companies(self, company1_data, company2_data, time_horizon):
         """
         Compare two companies for investment potential
         
@@ -339,7 +337,7 @@ class StockPredictor:
         """
         try:
             MIN_CONF = 0.85
-            MAX_CONF = 0.95
+            MAX_CONF = 1.00
             # Get predictions for both companies
             prediction1 = self.predict_investment_profitability(company1_data, 100000, time_horizon)  # Use 1 lakh for comparison
             prediction2 = self.predict_investment_profitability(company2_data, 100000, time_horizon)
@@ -410,34 +408,39 @@ class StockPredictor:
             }
     
     def _predict_future_price(self, X, y, features_df, time_horizon):
-        """Predict future price based on time horizon"""
+        """
+        Predict future price based on human-readable time horizon
+        Examples:
+          '10 Days', '2 Months', '1 Year'
+        """
+
         if self.best_model is None:
             return features_df['Close'].iloc[-1]
-        
-        # Create future features based on current trends
+
+        # Convert time horizon → days
+        days = self._parse_time_horizon(time_horizon)
+
+        # Normalize days to month-scale multiplier
+        # 30 days ≈ 1.0 baseline
+        multiplier = max(days / 30.0, 0.1)
+
+        # Last known features
         last_features = X[-1:].copy()
-        
-        # Adjust features based on time horizon
-        time_multipliers = {
-            '1_week': 0.25,
-            '1_month': 1.0,
-            '1_year': 12.0
-        }
-        
-        multiplier = time_multipliers.get(time_horizon, 1.0)
-        
-        # Apply trend adjustment
+
+        # Trend estimation
         if len(y) >= 5:
             recent_trend = np.mean(np.diff(y[-5:]))
             trend_adjustment = recent_trend * multiplier
         else:
-            trend_adjustment = 0
-        
-        # Make prediction
-        base_prediction = self.best_model.predict(last_features)[0]
+            trend_adjustment = 0.0
+
+        # Base ML prediction
+        base_prediction = float(self.best_model.predict(last_features)[0])
+
         predicted_price = base_prediction + trend_adjustment
-        
-        return max(predicted_price, features_df['Close'].iloc[-1] * 0.5)  # Prevent unrealistic drops
+
+        # Safety floor (avoid unrealistic crashes)
+        return max(predicted_price, features_df['Close'].iloc[-1] * 0.5)
     
     def _calculate_confidence_score(self, X, y):
         """Calculate confidence score based on model performance"""
@@ -827,84 +830,28 @@ class StockPredictor:
             'r2_score': r2,
             'mae': mae
         }
-#     def predict_investment_profitability(self, company_data, investment_amount, time_horizon='1_month'):
-#         """
-#         Predict investment profitability for a given company and amount
-#         """
-#         try:
-#             # Parse historical data safely
-#             historical_data = json.loads(company_data.get('historical_data', '[]'))
-#             df = pd.DataFrame(historical_data)
-#
-#             # Prepare data for prediction
-#             df = self._clean_data(df)
-#             features_df = self._engineer_features(df)
-#             X, y = self._prepare_training_data(features_df)
-#
-#             if len(X) < 3:
-#                 return {
-#                     'success': False,
-#                     'error': 'Insufficient historical data for prediction'
-#                 }
-#
-#             # Train multiple models
-#             self._train_multiple_models(X, y)
-#
-#             # Predict future price
-#             current_price = float(company_data.get('current_price', 0))
-#             if current_price <= 0:
-#                 return {
-#                     'success': False,
-#                     'error': 'Invalid current price'
-#                 }
-#
-#             predicted_price = float(self._predict_future_price(X, y, features_df, time_horizon))
-#
-#             # Calculate investment details
-#             shares_purchased = investment_amount / current_price
-#             predicted_value = shares_purchased * predicted_price
-#             predicted_profit = predicted_value - investment_amount
-#             profit_percentage = (predicted_profit / investment_amount) * 100
-#
-#             # Cap profit_percentage for sanity (optional)
-#             if abs(profit_percentage) > 1000:  # e.g., 1000% max
-#                 profit_percentage = 1000 if profit_percentage > 0 else -1000
-#
-#             is_profitable = predicted_profit > 0
-#
-#             # Confidence score
-#             confidence_score = self._calculate_confidence_score(X, y)
-#
-#             # Detailed breakdown
-#             prediction_details = {
-#                 'current_price': round(current_price, 2),
-#                 'predicted_price': round(predicted_price, 2),
-#                 'shares_purchased': round(shares_purchased, 4),
-#                 'predicted_value': round(predicted_value, 2),
-#                 'price_change': round(predicted_price - current_price, 2),
-#                 'price_change_percent': round(((predicted_price - current_price) / current_price) * 100, 2),
-#                 'risk_analysis': self._analyze_investment_risk(df, predicted_profit, investment_amount),
-#                 'market_factors': self._analyze_market_factors(company_data)
-#             }
-#
-#             # Final return data
-#             result_data = {
-#                 'success': True,
-#                 'investment_amount': round(float(investment_amount), 2),
-#                 'predicted_return': round(predicted_value, 2),
-#                 'predicted_profit': round(predicted_profit, 2),
-#                 'profit_percentage': round(profit_percentage, 2),
-#                 'is_profitable': bool(is_profitable),
-#                 'confidence_score': round(confidence_score, 3),
-#                 'time_horizon': str(time_horizon),
-#                 'prediction_details': convert_numpy_types(prediction_details)
-#             }
-#
-#             return convert_numpy_types(result_data)
-#
-#         except Exception as e:
-#             logging.error(f"Investment prediction error: {e}")
-#             return {
-#                 'success': False,
-#                 'error': f'Error predicting investment profitability: {str(e)}'
-#             }
+        
+    def _parse_time_horizon(self, time_horizon: str) -> int:
+            if not time_horizon:
+                return 30
+
+            parts = time_horizon.split()
+            if len(parts) < 2:
+                return 30
+
+            try:
+                value = int(parts[0])
+                unit = parts[1].lower()
+
+                if "day" in unit:
+                    return value
+                elif "week" in unit:
+                    return value * 7
+                elif "month" in unit:
+                    return value * 30
+                elif "year" in unit:
+                    return value * 365
+
+                return 30
+            except (ValueError, IndexError):
+                return 30

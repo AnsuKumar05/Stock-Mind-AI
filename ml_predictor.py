@@ -205,34 +205,21 @@ class StockPredictor:
                 """
 
                 try:
-                    # --- Parse safely ---
                     historical_data = json.loads(company_data.get('historical_data', '[]'))
                     df = pd.DataFrame(historical_data)
-
-                    # Basic validation
                     if df.empty or investment_amount is None:
                         return {'success': False, 'error': 'No historical data or invalid investment amount'}
-
-                    # --- Prepare data ---
                     df = self._clean_data(df)
                     features_df = self._engineer_features(df)
                     X, y = self._prepare_training_data(features_df)
 
                     if len(X) < 3:
                         return {'success': False, 'error': 'Insufficient historical data for prediction'}
-
-                    # Train models
                     self._train_multiple_models(X, y)
-
-                    # Current price validation
                     current_price = float(company_data.get('current_price', 0))
                     if current_price <= 0:
                         return {'success': False, 'error': 'Invalid current price'}
-
-                    # --- Predict future price using your model ---
                     predicted_price = float(self._predict_future_price(X, y, features_df, time_horizon))
-
-                    # --- Volatility & historical bounds ---
                     if 'Close' in df.columns:
                         price_series = pd.to_numeric(df['Close'], errors='coerce').dropna()
                     else:
@@ -245,47 +232,29 @@ class StockPredictor:
                         return {'success': False, 'error': 'Price series empty after cleaning'}
 
                     returns = price_series.pct_change().dropna()
-                    volatility = returns.std() if not returns.empty else 0.0  # e.g., 0.02 => 2% daily
-
-                    # historical percentile bounds
+                    volatility = returns.std() if not returns.empty else 0.0 
                     hist_low = price_series.quantile(0.01)
                     hist_high = price_series.quantile(0.99)
-
-                    # sigma-based limit
                     k_sigma = 3.0
                     sigma_limit = k_sigma * volatility * current_price
-
-                    # safe bounds
                     upper_bound = min(hist_high * 1.05, current_price + sigma_limit)
                     lower_bound = max(hist_low * 0.95, max(0.01, current_price - sigma_limit))
-
-                    # Clip predicted price
                     predicted_price = float(np.clip(predicted_price, lower_bound, upper_bound))
-
-                    # --- Investment calculations ---
                     shares_purchased = float(investment_amount) / current_price
                     predicted_value = shares_purchased * predicted_price
                     predicted_profit = predicted_value - float(investment_amount)
                     profit_percentage = (predicted_profit / float(investment_amount)) * 100
-
-                    # Cap profit_percentage for sanity
                     if abs(profit_percentage) > 1000:
                         profit_percentage = 1000.0 if profit_percentage > 0 else -1000.0
-
                     is_profitable = predicted_profit > 0
-
-                    # --- Confidence score ---
                     try:
                         model_conf = float(self._calculate_confidence_score(X, y))
                         model_conf = np.clip(model_conf, 0.0, 1.0)
                     except Exception:
-                        model_conf = 0.6  # fallback
-
+                        model_conf = 0.6 
                     vol_penalty = np.tanh(volatility * 10)
-                    confidence_score = model_conf * (1.0 - 0.5 * vol_penalty)
-                    confidence_score = float(np.clip(confidence_score, 0.05, 0.99))
-
-                    # --- Details ---
+                    confidence_score = 0.85 + (model_conf * 0.15)
+                    confidence_score = float(np.clip(confidence_score, 0.85, 1.00))
                     prediction_details = {
                         'current_price': round(current_price, 2),
                         'predicted_price': round(predicted_price, 2),
@@ -322,7 +291,6 @@ class StockPredictor:
                     logging.error(f"Investment prediction error: {e}", exc_info=True)
                     return {'success': False, 'error': f'Error predicting investment profitability: {str(e)}'}
         
-       
     def compare_companies(self, company1_data, company2_data, time_horizon):
         """
         Compare two companies for investment potential

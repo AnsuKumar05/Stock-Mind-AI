@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Compare All Companies - AI Stock Analyzer{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-3"><i class="fas fa-chart-pie me-2 text-primary"></i>Company Comparison & Ranking</h2>
+        <p class="text-muted">Compare and rank all companies based on CSV historical data and AI predictions.</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0 bg-dark text-white">
+            <div class="card-header border-0 bg-secondary bg-opacity-25 pb-0">
+                <h5 class="mb-0 py-2"><i class="fas fa-crown me-2 text-warning"></i>Top Investment Recommendation</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="badge bg-success p-2 fs-6 mb-2">Best To Invest: {{ recommendation.best_company }} ({{ recommendation.best_symbol }})</span>
+                    <br>
+                    <span class="badge bg-{{ 'success' if recommendation.risk_level == 'Low' else 'warning' if recommendation.risk_level == 'Medium' else 'danger' }} p-2">
+                        Risk Level: {{ recommendation.risk_level }}
+                    </span>
+                </div>
+                <p class="fs-5">{{ recommendation.justification }}</p>
+                <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i>Decision based strictly on computed analytics (growth rate, average return, stability, and volatility) and predictive modeling.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="mb-0"><i class="fas fa-list-ol me-2 text-primary"></i>All Companies Ranked</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-dark mb-0 align-middle">
+                        <thead class="bg-secondary bg-opacity-25">
+                            <tr>
+                                <th scope="col">Rank</th>
+                                <th scope="col">Company</th>
+                                <th scope="col">Current Price</th>
+                                <th scope="col">Next Day Pred.</th>
+                                <th scope="col">Trend</th>
+                                <th scope="col">Growth Rate</th>
+                                <th scope="col">Avg Return</th>
+                                <th scope="col">Volatility</th>
+                                <th scope="col">Stability</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in results %}
+                            <tr>
+                                <td>
+                                    {% if loop.index == 1 %}
+                                        <i class="fas fa-trophy text-warning me-1"></i>
+                                    {% endif %}
+                                    #{{ loop.index }}
+                                </td>
+                                <td>
+                                    <span class="fw-bold">{{ r.name }}</span><br>
+                                    <small class="text-muted">{{ r.symbol }}</small>
+                                </td>
+                                <td>{{ r.current_price | round(2) }}</td>
+                                <td class="{{ 'text-success' if r.next_day_price > r.current_price else 'text-danger' }}">
+                                    {{ r.next_day_price | round(2) }}
+                                </td>
+                                <td>
+                                    {% if r.trend_direction == 'Bullish' %}
+                                        <span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Bullish</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"><i class="fas fa-arrow-down me-1"></i>Bearish</span>
+                                    {% endif %}
+                                </td>
+                                <td class="{{ 'text-success' if r.growth_rate > 0 else 'text-danger' }}">
+                                    {{ r.growth_rate | round(2) }}%
+                                </td>
+                                <td class="{{ 'text-success' if r.avg_return > 0 else 'text-danger' }}">
+                                    {{ r.avg_return | round(4) }}%
+                                </td>
+                                <td>{{ r.volatility | round(2) }}%</td>
+                                <td>{{ r.stability | round(2) }} / 100</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

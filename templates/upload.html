@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Upload CSV - AI Stock Market Analyzer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">
+                    <i class="fas fa-upload me-2"></i>Upload Stock Data CSV
+                </h3>
+                <p class="mb-0 mt-2">Upload historical stock data for AI-powered predictions</p>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-4">
+                        <label for="file" class="form-label">
+                            <i class="fas fa-file-csv me-1"></i>Select CSV File
+                        </label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".csv,.txt" required>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Supports CSV files with stock price data. File size limit: 50MB
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="mb-3">Expected CSV Format</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Open</th>
+                                        <th>High</th>
+                                        <th>Low</th>
+                                        <th>Close</th>
+                                        <th>Volume</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>2023-01-01</td>
+                                        <td>100.50</td>
+                                        <td>102.00</td>
+                                        <td>99.50</td>
+                                        <td>101.25</td>
+                                        <td>1000000</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2023-01-02</td>
+                                        <td>101.25</td>
+                                        <td>103.75</td>
+                                        <td>100.00</td>
+                                        <td>102.50</td>
+                                        <td>850000</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <strong>Flexible Format:</strong> Our system can automatically detect and map various column names (e.g., "Price" instead of "Close", "Time" instead of "Date").
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-upload me-2"></i>Upload and Predict
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Upload Tips -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-tips me-2"></i>Upload Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-check-circle text-success me-2"></i>Supported Formats</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-dot-circle me-2 text-primary"></i>CSV files (.csv)</li>
+                            <li><i class="fas fa-dot-circle me-2 text-primary"></i>Tab-separated files (.txt)</li>
+                            <li><i class="fas fa-dot-circle me-2 text-primary"></i>Various separators (comma, semicolon, tab)</li>
+                            <li><i class="fas fa-dot-circle me-2 text-primary"></i>Multiple encoding formats</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-chart-line text-info me-2"></i>What Happens Next</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-cog me-2 text-warning"></i>Data validation and cleaning</li>
+                            <li><i class="fas fa-brain me-2 text-success"></i>AI feature engineering</li>
+                            <li><i class="fas fa-robot me-2 text-info"></i>Multiple model training</li>
+                            <li><i class="fas fa-chart-bar me-2 text-primary"></i>Prediction with confidence score</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Processing your file...</h5>
+                <p class="text-muted mb-0">Please wait while our AI analyzes your data</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function() {
+    // Show loading modal when form is submitted
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    loadingModal.show();
+});
+
+// File input validation
+document.getElementById('file').addEventListener('change', function() {
+    const file = this.files[0];
+    if (file) {
+        const fileSize = file.size / (1024 * 1024); // Convert to MB
+        if (fileSize > 50) {
+            alert('File size exceeds 50MB limit. Please choose a smaller file.');
+            this.value = '';
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -581,5 +581,56 @@ function downloadInvestmentPDF() {
     });
     {% endif %}
 }
+
+{% if investment_id %}
+// Dynamic AJAX data reload
+setInterval(() => {
+    fetch(`/api/investment_prediction_details/{{ investment_id }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log("Prediction updated in background.", data);
+                
+                // Format helper
+                const formatINR = (val) => '₹' + parseFloat(val).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                // Main results section
+                const headers = document.querySelectorAll('.card-body h4.mb-1');
+                if (headers.length >= 4) {
+                    headers[0].textContent = formatINR(data.investment_amount);
+                    headers[1].textContent = formatINR(data.predicted_return);
+                    
+                    if (data.predicted_profit > 0) {
+                        headers[2].innerHTML = `<span class="text-success">+${formatINR(data.predicted_profit)}</span>`;
+                        headers[3].innerHTML = `<span class="text-success">+${parseFloat(data.profit_percentage).toFixed(2)}%</span>`;
+                    } else {
+                        headers[2].innerHTML = `<span class="text-danger">${formatINR(data.predicted_profit)}</span>`;
+                        headers[3].innerHTML = `<span class="text-danger">${parseFloat(data.profit_percentage).toFixed(2)}%</span>`;
+                    }
+                }
+                
+                // Company Details price
+                const companyPriceHeader = document.querySelector('.col-md-4 .card-body h5.mb-2');
+                if (companyPriceHeader) companyPriceHeader.textContent = formatINR(data.prediction_details.current_price);
+                
+                // Detailed Analysis
+                const detailHeaders = document.querySelectorAll('.card.bg-light h4');
+                if (detailHeaders.length >= 3) {
+                    detailHeaders[0].textContent = parseFloat(data.prediction_details.shares_purchased).toFixed(4);
+                    detailHeaders[1].textContent = formatINR(data.prediction_details.predicted_price);
+                    
+                    if (data.prediction_details.price_change > 0) {
+                        detailHeaders[2].className = "text-success";
+                        detailHeaders[2].textContent = "+" + parseFloat(data.prediction_details.price_change_percent).toFixed(2) + "%";
+                    } else {
+                        detailHeaders[2].className = "text-danger";
+                        detailHeaders[2].textContent = parseFloat(data.prediction_details.price_change_percent).toFixed(2) + "%";
+                    }
+                }
+            }
+        })
+        .catch(err => console.error("AJAX polling error:", err));
+}, 30000); // 30 seconds
+{% endif %}
 </script>
 {% endblock %}

@@ -786,8 +786,50 @@ function downloadComparisonPDF() {
         console.error('Error downloading PDF:', error);
         alert('Error downloading PDF. Please try again.');
     });
+    });
     {% endif %}
 }
+
+{% if comparison_id %}
+setInterval(() => {
+    fetch(`/api/company_comparison_details/{{ comparison_id }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log("Comparison updated in background", data);
+                
+                // Fetch the elements and update them
+                // Main returns
+                const returnHeaders = document.querySelectorAll('.card-body h3');
+                if (returnHeaders.length >= 2) {
+                    returnHeaders[0].textContent = parseFloat(data.company1_predicted_return).toFixed(2) + "%";
+                    returnHeaders[0].className = data.company1_predicted_return > 0 ? 'text-success' : 'text-danger';
+                    
+                    returnHeaders[1].textContent = parseFloat(data.company2_predicted_return).toFixed(2) + "%";
+                    returnHeaders[1].className = data.company2_predicted_return > 0 ? 'text-success' : 'text-danger';
+                }
+                
+                // Recommended winner UI adjustments
+                const winnerContainers = document.querySelectorAll('.col-md-4 .border-end .badge.bg-success');
+                // The structure has winner conditionally placed, updating the whole block might be tricky if the winner switches.
+                // Doing a simple reload if the winner changes to reflect full UI switches:
+                const prevRecommended = {{ results.recommended_company }};
+                if (data.recommended_company !== prevRecommended) {
+                     window.location.reload();
+                     return;
+                }
+                
+                // Return Difference
+                const diffHeader = document.querySelector('.text-warning');
+                if (diffHeader && data.comparison_details.return_difference) {
+                    diffHeader.textContent = parseFloat(data.comparison_details.return_difference).toFixed(2) + "%";
+                }
+            }
+        })
+        .catch(err => console.error(err));
+}, 30000); // 30 seconds
+{% endif %}
+
 </script>
 
 {% endblock %}

@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Compare All Companies{% endblock %}
+
+{% block content %}
+<div class="row mb-4 mt-3">
+    <div class="col-12 d-flex flex-column flex-md-row justify-content-between align-items-center">
+        <h2 class="mb-3 mb-md-0 fw-bold"><i class="bi bi-bar-chart-fill text-primary me-2"></i>Global Network Comparison</h2>
+        <div>
+            <span class="badge bg-success fs-6 me-2"><i class="bi bi-broadcast"></i> Live Price Sync</span>
+            <button class="btn btn-outline-primary btn-sm me-2" onclick="downloadCompareAllPDF()"><i class="fas fa-file-pdf"></i> Download Report</button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.location.reload()"><i class="bi bi-arrow-clockwise"></i> Force Refresh</button>
+        </div>
+    </div>
+    <p class="text-muted small mt-2"><i class="fas fa-info-circle me-1 text-info"></i>Stock prices are automatically fetched and updated hourly.</p>
+</div>
+
+<div class="row">
+    <!-- Chart Container for Current Prices -->
+    <div class="col-12 col-lg-6 mb-4">
+        <div class="card shadow-sm h-100 border-0 rounded-4">
+            <div class="card-header bg-white border-0 pt-4 pb-2">
+                <h5 class="card-title fw-bold mb-0">Current Market Price (₹)</h5>
+            </div>
+            <div class="card-body">
+                <div class="position-relative" style="height: 400px; width: 100%;">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Container for Market Cap -->
+    <div class="col-12 col-lg-6 mb-4">
+        <div class="card shadow-sm h-100 border-0 rounded-4">
+            <div class="card-header bg-white border-0 pt-4 pb-2">
+                <h5 class="card-title fw-bold mb-0">Market Capitalization (Billions ₹)</h5>
+            </div>
+            <div class="card-body">
+                <div class="position-relative" style="height: 400px; width: 100%;">
+                    <canvas id="mcapChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scatter Plot -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-white border-0 pt-4 pb-2">
+                <h5 class="card-title fw-bold mb-0">Market Matrix: Value vs Cost</h5>
+            </div>
+            <div class="card-body">
+                <div class="position-relative" style="height: 500px; width: 100%;">
+                    <canvas id="scatterChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Initial Render Data injected via Jinja
+    let rawData = [
+        {% for c in companies %}
+        {
+            id: {{ c.id }},
+            name: "{{ c.name }}",
+            symbol: "{{ c.symbol }}",
+            current_price: {{ c.current_price }},
+            market_cap: {{ c.market_cap|default(0) }},
+            sector: "{{ c.sector }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // Sorting arrays for specific charts
+    const priceSorted = [...rawData].sort((a,b) => b.current_price - a.current_price);
+    const mcapSorted = [...rawData].sort((a,b) => b.market_cap - a.market_cap);
+
+    // CSS styling
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        animation: { duration: 1000 }
+    };
+
+    // 1. Price Bar Chart
+    const ctxPrice = document.getElementById('priceChart').getContext('2d');
+    let priceChart = new Chart(ctxPrice, {
+        type: 'bar',
+        data: {
+            labels: priceSorted.map(d => d.symbol),
+            datasets: [{
+                label: 'Price (₹)',
+                data: priceSorted.map(d => d.current_price),
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: chartOptions
+    });
+
+    // 2. MCap Bar Chart
+    const ctxMcap = document.getElementById('mcapChart').getContext('2d');
+    let mcapChart = new Chart(ctxMcap, {
+        type: 'bar',
+        data: {
+            labels: mcapSorted.map(d => d.symbol),
+            datasets: [{
+                label: 'Market Cap (B ₹)',
+                data: mcapSorted.map(d => d.market_cap / 1000000000), // convert to billions
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: chartOptions
+    });
+
+    // 3. Scatter Chart (Value distribution)
+    const ctxScatter = document.getElementById('scatterChart').getContext('2d');
+    let scatterChart = new Chart(ctxScatter, {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Companies',
+                data: rawData.map(d => ({x: d.current_price, y: d.market_cap / 1000000000, label: d.symbol})),
+                backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                pointRadius: 6,
+                pointHoverRadius: 9
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.raw.label + ': (Price ₹' + context.raw.x + ', Cap ' + context.raw.y.toFixed(2) + 'B)';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Stock Price (₹)' } },
+                y: { title: { display: true, text: 'Market Cap (Billions ₹)' }, type: 'logarithmic' } // Log scale for better visibility
+            }
+        }
+    });
+
+    function downloadCompareAllPDF() {
+        const payloadData = {
+            type: 'compare_all',
+            companies: rawData
+        };
+
+        fetch('{{ url_for("download_current_prediction_pdf") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payloadData)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('PDF generation failed');
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = 'global_market_report.pdf';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('Error downloading PDF:', error);
+            alert('Error downloading PDF. Please try again.');
+        });
+    }
+
+    // --- Dynamic Background AJAX Polling ---
+    setInterval(() => {
+        fetch('/api/compare_all_details')
+            .then(res => res.json())
+            .then(response => {
+                if (response.success && response.data) {
+                    console.log("Background UI Sync Completed");
+                    const updatedData = response.data;
+
+                    // Re-sort
+                    const newPriceSorted = [...updatedData].sort((a,b) => b.current_price - a.current_price);
+                    const newMcapSorted = [...updatedData].sort((a,b) => b.market_cap - a.market_cap);
+
+                    // Update Price Chart
+                    priceChart.data.labels = newPriceSorted.map(d => d.symbol);
+                    priceChart.data.datasets[0].data = newPriceSorted.map(d => d.current_price);
+                    priceChart.update();
+
+                    // Update MCap Chart
+                    mcapChart.data.labels = newMcapSorted.map(d => d.symbol);
+                    mcapChart.data.datasets[0].data = newMcapSorted.map(d => d.market_cap / 1000000000);
+                    mcapChart.update();
+
+                    // Update Scatter Chart
+                    scatterChart.data.datasets[0].data = updatedData.map(d => ({x: d.current_price, y: d.market_cap / 1000000000, label: d.symbol}));
+                    scatterChart.update();
+                }
+            })
+            .catch(err => console.error(err));
+    }, 30000); // 30 seconds interval
+</script>
+{% endblock %}

@@ -26,12 +26,32 @@ def append_to_csv(symbol, data_row):
             df_new.to_csv(path, mode='a', header=False, index=False)
 
 def get_last_n_records(symbol, n=20):
-    with csv_lock:
-        path = get_csv_path(symbol)
-        if not os.path.exists(path):
-            return pd.DataFrame()
-        df = pd.read_csv(path)
-        return df.tail(n)
+    from routes.models import Company, DailyStockData
+    import pandas as pd
+    
+    comp = Company.query.filter_by(symbol=symbol).first()
+    if not comp:
+        return pd.DataFrame()
+        
+    records = DailyStockData.query.filter_by(company_id=comp.id).order_by(DailyStockData.timestamp.desc()).limit(n).all()
+    if not records:
+        return pd.DataFrame()
+        
+    # Reverse to return chronologically
+    records.reverse()
+    
+    data = []
+    for r in records:
+        data.append({
+            'Date': r.timestamp.strftime('%Y-%m-%d %H:%M:%S') if r.timestamp else None,
+            'Close': r.current_price,
+            'Volume': r.volume,
+            'High': r.high,
+            'Low': r.low,
+            'Open': r.open_price
+        })
+        
+    return pd.DataFrame(data)
 
 def clean_old_csv_data(max_hours=4):
     """Keep only last max_hours of data in CSV"""

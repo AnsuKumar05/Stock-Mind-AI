@@ -67,19 +67,6 @@ def fetch_and_update_hourly(app):
                 timestamp=datetime.utcnow()
             )
             db.session.add(new_hourly)
-            
-            # Append to CSV
-            csv_row = {
-                'Date': current_time_str,
-                'Close': price,
-                'Volume': volume,
-                'High': high,
-                'Low': low,
-                'Open': open_price,
-                'Change_Pct': round(change_pct, 4)
-            }
-            append_to_csv(comp.symbol, csv_row)
-            
             updated_count += 1
             app.logger.info(f"Updated {comp.symbol} to {price}")
 

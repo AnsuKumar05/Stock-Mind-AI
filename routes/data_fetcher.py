@@ -19,7 +19,7 @@ def fetch_and_update_hourly(app):
     for comp in companies:
         try:
             # Format symbol for Indian stocks on Yahoo Finance correctly
-            indian_stocks = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN', 'BHARTIARTL', 'ITC', 'LT', 'BAJFINANCE', 'HINDUNILVR', 'ASIANPAINT', 'MARUTI', 'SUNPHARMA', 'WIPRO']
+            indian_stocks = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN', 'BHARTIARTL', 'ITC', 'LT', 'BAJFINANCE', 'HINDUNILVR', 'ASIANPAINT', 'MARUTI', 'SUNPHARMA', 'WIPRO', 'TATAMOTORS', 'TATASTEEL', 'AXISBANK', 'HCLTECH', 'NTPC']
             yf_symbol = f"{comp.symbol}.NS" if comp.symbol in indian_stocks else comp.symbol
             
             ticker = yf.Ticker(yf_symbol)

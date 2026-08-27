@@ -8,7 +8,7 @@ from routes.models import Company, DailyStockData
 from routes.extensions import db
 
 COMPANIES = [
-    # 15 Indian Companies
+    # 20 Indian Companies
     {'name': 'Reliance Industries', 'symbol': 'RELIANCE', 'sector': 'Oil & Gas', 'current_price': 1395.6, 'market_cap': 2000000000000, 'pe_ratio': 25.4},
     {'name': 'Tata Consultancy Services', 'symbol': 'TCS', 'sector': 'IT', 'current_price': 2371.3, 'market_cap': 1500000000000, 'pe_ratio': 30.1},
     {'name': 'HDFC Bank', 'symbol': 'HDFCBANK', 'sector': 'Banking', 'current_price': 809.5, 'market_cap': 1100000000000, 'pe_ratio': 15.5},
@@ -24,8 +24,13 @@ COMPANIES = [
     {'name': 'Maruti Suzuki', 'symbol': 'MARUTI', 'sector': 'Automotive', 'current_price': 12606.0, 'market_cap': 39000000000, 'pe_ratio': 28.5},
     {'name': 'Sun Pharma', 'symbol': 'SUNPHARMA', 'sector': 'Pharma', 'current_price': 1761.1, 'market_cap': 37000000000, 'pe_ratio': 35.6},
     {'name': 'Wipro', 'symbol': 'WIPRO', 'sector': 'IT', 'current_price': 188.76, 'market_cap': 25000000000, 'pe_ratio': 21.4},
+    {'name': 'Tata Motors', 'symbol': 'TATAMOTORS', 'sector': 'Automotive', 'current_price': 680.5, 'market_cap': 2500000000000, 'pe_ratio': 10.2},
+    {'name': 'Tata Steel', 'symbol': 'TATASTEEL', 'sector': 'Metals & Mining', 'current_price': 145.2, 'market_cap': 1800000000000, 'pe_ratio': 12.8},
+    {'name': 'Axis Bank', 'symbol': 'AXISBANK', 'sector': 'Banking', 'current_price': 1050.8, 'market_cap': 3200000000000, 'pe_ratio': 14.1},
+    {'name': 'HCL Technologies', 'symbol': 'HCLTECH', 'sector': 'IT', 'current_price': 1420.3, 'market_cap': 3800000000000, 'pe_ratio': 26.5},
+    {'name': 'NTPC Limited', 'symbol': 'NTPC', 'sector': 'Energy', 'current_price': 335.6, 'market_cap': 3250000000000, 'pe_ratio': 16.4},
     
-    # 15 Global Companies
+    # 20 Global Companies
     {'name': 'Apple Inc', 'symbol': 'AAPL', 'sector': 'Technology', 'current_price': 249.94, 'market_cap': 2800000000000, 'pe_ratio': 28.5},
     {'name': 'Microsoft Corporation', 'symbol': 'MSFT', 'sector': 'Technology', 'current_price': 391.79, 'market_cap': 3100000000000, 'pe_ratio': 35.2},
     {'name': 'Tesla Inc', 'symbol': 'TSLA', 'sector': 'Automotive', 'current_price': 392.78, 'market_cap': 580000000000, 'pe_ratio': 45.4},
@@ -40,7 +45,12 @@ COMPANIES = [
     {'name': 'Mastercard', 'symbol': 'MA', 'sector': 'Finance', 'current_price': 488.47, 'market_cap': 440000000000, 'pe_ratio': 35.6},
     {'name': 'Johnson & Johnson', 'symbol': 'JNJ', 'sector': 'Healthcare', 'current_price': 237.28, 'market_cap': 370000000000, 'pe_ratio': 22.4},
     {'name': 'Procter & Gamble', 'symbol': 'PG', 'sector': 'FMCG', 'current_price': 146.71, 'market_cap': 380000000000, 'pe_ratio': 25.1},
-    {'name': 'Netflix Inc', 'symbol': 'NFLX', 'sector': 'Entertainment', 'current_price': 94.7, 'market_cap': 270000000000, 'pe_ratio': 45.8}
+    {'name': 'Netflix Inc', 'symbol': 'NFLX', 'sector': 'Entertainment', 'current_price': 94.7, 'market_cap': 270000000000, 'pe_ratio': 45.8},
+    {'name': 'Advanced Micro Devices', 'symbol': 'AMD', 'sector': 'Technology', 'current_price': 165.4, 'market_cap': 260000000000, 'pe_ratio': 48.2},
+    {'name': 'Intel Corporation', 'symbol': 'INTC', 'sector': 'Technology', 'current_price': 23.5, 'market_cap': 100000000000, 'pe_ratio': 32.1},
+    {'name': 'The Walt Disney Company', 'symbol': 'DIS', 'sector': 'Entertainment', 'current_price': 96.8, 'market_cap': 175000000000, 'pe_ratio': 20.4},
+    {'name': 'Oracle Corporation', 'symbol': 'ORCL', 'sector': 'Technology', 'current_price': 140.5, 'market_cap': 380000000000, 'pe_ratio': 38.6},
+    {'name': 'PayPal Holdings', 'symbol': 'PYPL', 'sector': 'Finance', 'current_price': 68.9, 'market_cap': 70000000000, 'pe_ratio': 17.5}
 ]
 
 def calculate_sma(data, window):
@@ -139,8 +149,8 @@ def generate_mock_historical_data(current_price, days=60):
 
 def initialize_companies():
     """Insert predefined companies with mock historical data into DB"""
-    # Delete old records if we don't have exactly 30 companies, or if running for first time
-    if Company.query.count() != 30:
+    # Delete old records if we don't have exactly len(COMPANIES) companies, or if running for first time
+    if Company.query.count() != len(COMPANIES):
         # Avoid foreign key constraint issues
         from routes.models import InvestmentPrediction, CompanyComparison, DailyStockData
         db.session.query(InvestmentPrediction).delete()
